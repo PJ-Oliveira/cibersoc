@@ -91,8 +91,8 @@ class GovernanceCycle:
     aggregate_employment: float
 
 
-def _hash_citizen_id(region_id: str, year: int, portfolio: str) -> str:
-    payload = f"{region_id}:{year}:{portfolio}".encode("utf-8")
+def _hash_citizen_id(region_id: str, citizen_index: int) -> str:
+    payload = f"{region_id}:{citizen_index}".encode("utf-8")
     return hashlib.sha256(payload).hexdigest()[:20]
 
 
@@ -105,6 +105,7 @@ class NationSimulationEngine:
         self.current_year: int = 1
         self.regions: tuple[RegionProfile, ...] = self._initialize_regions()
         self.cycles: list[GovernanceCycle] = []
+        self._served_citizen_hashes: set[str] = set()
 
     def _initialize_regions(self) -> tuple[RegionProfile, ...]:
         rng = random.Random(self._base_seed)
@@ -149,16 +150,25 @@ class NationSimulationEngine:
 
     def _draw_governors(self, year: int, cycle_seed: int) -> tuple[GovernorSlot, ...]:
         rng = random.Random(cycle_seed + year * 13)
-        region_ids = [r.region_id for r in self.regions]
-        return tuple(
-            GovernorSlot(
+        slots: list[GovernorSlot] = []
+        for portfolio in GOVERNANCE_PORTFOLIOS:
+            region = rng.choice(self.regions)
+            citizen_hash = self._draw_unique_citizen(rng, region)
+            slots.append(GovernorSlot(
                 portfolio=portfolio,
-                citizen_hash=_hash_citizen_id(rng.choice(region_ids), year, portfolio),
-                region_id=rng.choice(region_ids),
+                citizen_hash=citizen_hash,
+                region_id=region.region_id,
                 term_year=year,
-            )
-            for portfolio in GOVERNANCE_PORTFOLIOS
-        )
+            ))
+        return tuple(slots)
+
+    def _draw_unique_citizen(self, rng: random.Random, region: RegionProfile) -> str:
+        while True:
+            index = rng.randint(0, region.population_size - 1)
+            citizen_hash = _hash_citizen_id(region.region_id, index)
+            if citizen_hash not in self._served_citizen_hashes:
+                self._served_citizen_hashes.add(citizen_hash)
+                return citizen_hash
 
     @staticmethod
     def _apply_event_effects(

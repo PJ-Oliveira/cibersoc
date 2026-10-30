@@ -28,18 +28,18 @@ def _make_matrix(seed: int = 0) -> StochasticEventMatrix:
 
 class TestHashCitizenId:
     def test_returns_20_char_hex(self) -> None:
-        result = _hash_citizen_id("BR-SP", 1, "EDUCATION")
+        result = _hash_citizen_id("BR-SP", 1)
         assert len(result) == 20
         assert all(c in "0123456789abcdef" for c in result)
 
     def test_deterministic(self) -> None:
-        a = _hash_citizen_id("BR-RJ", 3, "HEALTH")
-        b = _hash_citizen_id("BR-RJ", 3, "HEALTH")
+        a = _hash_citizen_id("BR-RJ", 3)
+        b = _hash_citizen_id("BR-RJ", 3)
         assert a == b
 
     def test_distinct_inputs_produce_distinct_hashes(self) -> None:
-        a = _hash_citizen_id("BR-SP", 1, "ECONOMY")
-        b = _hash_citizen_id("BR-RJ", 1, "ECONOMY")
+        a = _hash_citizen_id("BR-SP", 1)
+        b = _hash_citizen_id("BR-RJ", 1)
         assert a != b
 
 
@@ -251,6 +251,31 @@ class TestSerialiseForRenderer:
             assert key in region_dict
 
 
+class TestDrawUniqueCitizen:
+    def test_retries_on_collision(self) -> None:
+        import random as _random
+
+        class _CollideFirstRng(_random.Random):
+            def __init__(self) -> None:
+                super().__init__()
+                self._call_count = 0
+
+            def randint(self, a: int, b: int) -> int:
+                result = 0 if self._call_count == 0 else 1
+                self._call_count += 1
+                return result
+
+        region = RegionProfile("BR-TS", "TestState", 0.0, 0.0, 2, 0.7, 0.45, 0.80)
+        first_hash = _hash_citizen_id("BR-TS", 0)
+        engine = _make_engine()
+        engine._served_citizen_hashes.add(first_hash)
+        rng = _CollideFirstRng()
+        result = engine._draw_unique_citizen(rng, region)
+        assert result == _hash_citizen_id("BR-TS", 1)
+        assert first_hash in engine._served_citizen_hashes
+        assert result in engine._served_citizen_hashes
+
+
 class TestStochasticEventMatrix:
     def test_generates_two_to_five_events(self) -> None:
         matrix = _make_matrix()
@@ -312,6 +337,41 @@ class TestGovernanceCycleDataclass:
         cycle = engine.advance_year(matrix)
         portfolios_assigned = {g.portfolio for g in cycle.governors}
         assert portfolios_assigned == set(GOVERNANCE_PORTFOLIOS)
+
+    def test_each_governor_term_is_one_year(self) -> None:
+        engine = _make_engine()
+        matrix = _make_matrix()
+        cycle = engine.advance_year(matrix)
+        for gov in cycle.governors:
+            assert gov.term_year == 1
+
+    def test_no_citizen_serves_twice_across_ten_years(self) -> None:
+        engine = _make_engine()
+        matrix = _make_matrix()
+        all_hashes: list[str] = []
+        for _ in range(NationSimulationEngine.SIMULATION_YEARS):
+            cycle = engine.advance_year(matrix)
+            all_hashes.extend(g.citizen_hash for g in cycle.governors)
+        assert len(all_hashes) == len(set(all_hashes))
+
+    def test_served_hashes_accumulate_across_cycles(self) -> None:
+        engine = _make_engine()
+        matrix = _make_matrix()
+        engine.advance_year(matrix)
+        after_one = len(engine._served_citizen_hashes)
+        engine.advance_year(matrix)
+        after_two = len(engine._served_citizen_hashes)
+        assert after_two == after_one + len(GOVERNANCE_PORTFOLIOS)
+
+    def test_reset_clears_served_hashes(self, qtbot) -> None:
+        from cibersoc.ui.simulation_view import SimulationTab
+        tab = SimulationTab()
+        qtbot.addWidget(tab)
+        tab._on_advance_year()
+        served_before = len(tab._sim_engine._served_citizen_hashes)
+        tab._on_reset()
+        assert len(tab._sim_engine._served_citizen_hashes) == 0
+        assert served_before > 0
 
 
 class TestSimulationView:
