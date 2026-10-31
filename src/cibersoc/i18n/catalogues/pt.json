@@ -191,5 +191,14 @@
   "simulation.group_controls": "Controles da Simulação",
   "simulation.events_group": "Eventos Emergentes SEEM",
   "simulation.btn_advance_year": "Avançar Ano",
-  "simulation.btn_reset": "Reiniciar Simulação"
+  "simulation.btn_reset": "Reiniciar Simulação",
+  "civic_exam.title": "Exame de Competência Cívica",
+  "civic_exam.subjects": "Lógica · Computação · Linguagens · Matemática · Geografia",
+  "civic_exam.min_score": "Nota mínima aprovada: {score}/100 por disciplina",
+  "civic_exam.renewal": "Renovação obrigatória a cada {years} anos (até aos {limit} anos)",
+  "civic_exam.retry_first": "Primeira repetição: no prazo de {days} dias",
+  "civic_exam.retry_subsequent": "Repetições seguintes: a cada {days} dias",
+  "civic_exam.status.compliant": "Conforme — elegível para sorteio",
+  "civic_exam.status.non_compliant": "Não conforme — inelegível para sorteio",
+  "civic_exam.status.exempt": "Isento (idade ≥ 60 anos)"
 }

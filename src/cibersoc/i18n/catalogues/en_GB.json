@@ -191,5 +191,14 @@
   "simulation.group_controls": "Simulation Controls",
   "simulation.events_group": "SEEM Emergent Events",
   "simulation.btn_advance_year": "Advance Year",
-  "simulation.btn_reset": "Reset Simulation"
+  "simulation.btn_reset": "Reset Simulation",
+  "civic_exam.title": "Civic Competence Examination",
+  "civic_exam.subjects": "Logic · Computing · Languages · Mathematics · Geography",
+  "civic_exam.min_score": "Minimum passing score: {score}/100 per subject",
+  "civic_exam.renewal": "Renewal required every {years} years (up to age {limit})",
+  "civic_exam.retry_first": "First retake: within {days} days",
+  "civic_exam.retry_subsequent": "Subsequent retakes: every {days} days",
+  "civic_exam.status.compliant": "Compliant — eligible for sortition",
+  "civic_exam.status.non_compliant": "Non-compliant — ineligible for sortition",
+  "civic_exam.status.exempt": "Exempt (age ≥ 60)"
 }
