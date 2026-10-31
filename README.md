@@ -119,7 +119,7 @@ The interface includes a **fully responsive typography scaling system** designed
 
 ### Installation
 ```bash
-git clone https://github.com/your-org/cibersoc.git
+git clone https://github.com/PJ-Oliveira/cibersoc.git
 cd cibersoc
 uv sync
 ```

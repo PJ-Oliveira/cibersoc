@@ -4,8 +4,9 @@
 
 El simulador **CIBERSOC** requiere **Python 3.12+** (validado sobre **CPython 3.14.7**) gestionado mediante [`uv`](https://docs.astral.sh/uv/). Todas las dependencias (`PySide6`, `pytest`, `pytest-cov`, `pytest-qt`, `coverage`) se encuentran fijadas en [`uv.lock`](../../uv.lock).
 
-### 1.1 Sincronización del Entorno Virtual Aislado
+### 1.1 Clonación y Sincronización del Entorno Virtual Aislado
 ```bash
+git clone https://github.com/PJ-Oliveira/cibersoc.git
 cd cibersoc
 uv sync
 ```
