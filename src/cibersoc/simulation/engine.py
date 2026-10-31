@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-import hashlib
-import random
+import csv
 from dataclasses import dataclass, field
-
+from enum import StrEnum
+import hashlib
+import json
+from pathlib import Path
+import random
 
 BRAZIL_REGIONS: tuple[tuple[str, str, float, float, int], ...] = (
     ("BR-SP", "São Paulo", -23.55, -46.63, 45_000_000),
@@ -27,24 +30,96 @@ GOVERNANCE_PORTFOLIOS: tuple[str, ...] = (
 )
 
 _EVENT_TEMPLATES: tuple[tuple[str, str, str], ...] = (
-    ("ECONOMIC", "Inter-regional Cooperative Alliance Formed", "Multiple productive cooperatives unite their supply chains under collective governance, increasing efficiency by a statistical margin."),
-    ("CLIMATE", "Amazonian Rainfall Pattern Shift Detected", "Meteorological models indicate a 0.8-sigma deviation in precipitation across northern biomes, affecting agro-ecological outputs."),
-    ("SOCIAL", "Grassroots Sortition Literacy Programme Launched", "Citizens across municipalities participate in civic education modules on demarchic governance, raising participatory awareness."),
-    ("ECONOMIC", "Leontief Input-Output Recalibration Required", "Structural changes in energy distribution have altered the technical matrix, requiring a Jacobi-iteration recalculation of embedded labour hours."),
-    ("POLITICAL", "Federal Lottery Draw Triggers Constitutional Review", "A newly drawn federal councillor proposes a constitutional amendment, triggering review procedures across the five-council mesh."),
-    ("CLIMATE", "Solar Energy Grid Expansion Milestone Reached", "State-owned solar cooperatives in the north-east achieve a new generation threshold, altering the energy sector Leontief coefficient."),
-    ("SOCIAL", "Universal Basic Services Index Rises 0.03 Points", "Aggregate data from 26 states indicates improvement in combined health and education provision, reflecting policy compliance."),
-    ("ECONOMIC", "Automation Productivity Shock in Industrial Sector", "Introduction of CNC-integrated robotics in metalworking cooperatives has altered the direct labour coefficient for industrial inputs."),
-    ("POLITICAL", "Military Subordination Protocol Successfully Executed", "A routine multi-sig civilian oversight order to the High Command was authenticated by the full Defence Chamber without incident."),
-    ("CLIMATE", "Cerrado Biome Carbon Sequestration Peaks", "Carbon sink data from the central savannah shows above-baseline sequestration, improving the planetary boundary constraint margin."),
-    ("SOCIAL", "Inter-Generational Stratification Recalibration", "The sortition engine detected a minor generational imbalance in council composition, triggering a Hamilton-quota correction."),
-    ("ECONOMIC", "Workers Cooperative Merger Increases 1/N Base", "Two metalworking cooperatives in Paraná unite their worker rosters, expanding the eligible surplus-sharing population."),
-    ("POLITICAL", "Cybernetic Budget Plebiscite Turnout Record", "Anonymous token issuance for the annual macro-allocation vote broke a ten-year record."),
-    ("SOCIAL", "Healthcare Distribution Normalises Across Strata", "Statistical distribution of healthcare access across income strata has narrowed, indicating convergence toward the target Gini reduction trajectory."),
-    ("CLIMATE", "Flood Risk Matrix Updated for Coastal Regions", "LIDAR survey data reveals coastal land-use changes in Rio and Bahia states requiring updated vulnerability coefficients."),
-    ("ECONOMIC", "Kantorovich Plan Identifies New Expansion Path", "A Kantorovich ray-expansion calculation reveals a feasible output-expansion trajectory under current capacity constraints."),
-    ("POLITICAL", "Ex-Councillor Successfully Reinstated Under Protection Lock", "A citizen completing their demarchic mandate has been reinstated with the 180-day employment stability lock duly activated."),
-    ("SOCIAL", "Cross-Regional Educational Equalisation Programme Begins", "Federal allocative directive resources are channelled into eight low-HDI municipalities to reduce educational provision variance."),
+    (
+        "ECONOMIC",
+        "Inter-regional Cooperative Alliance Formed",
+        "Multiple productive cooperatives unite their supply chains under collective governance, increasing efficiency by a statistical margin.",
+    ),
+    (
+        "CLIMATE",
+        "Amazonian Rainfall Pattern Shift Detected",
+        "Meteorological models indicate a 0.8-sigma deviation in precipitation across northern biomes, affecting agro-ecological outputs.",
+    ),
+    (
+        "SOCIAL",
+        "Grassroots Sortition Literacy Programme Launched",
+        "Citizens across municipalities participate in civic education modules on demarchic governance, raising participatory awareness.",
+    ),
+    (
+        "ECONOMIC",
+        "Leontief Input-Output Recalibration Required",
+        "Structural changes in energy distribution have altered the technical matrix, requiring a Jacobi-iteration recalculation of embedded labour hours.",
+    ),
+    (
+        "POLITICAL",
+        "Federal Lottery Draw Triggers Constitutional Review",
+        "A newly drawn federal councillor proposes a constitutional amendment, triggering review procedures across the five-council mesh.",
+    ),
+    (
+        "CLIMATE",
+        "Solar Energy Grid Expansion Milestone Reached",
+        "State-owned solar cooperatives in the north-east achieve a new generation threshold, altering the energy sector Leontief coefficient.",
+    ),
+    (
+        "SOCIAL",
+        "Universal Basic Services Index Rises 0.03 Points",
+        "Aggregate data from 26 states indicates improvement in combined health and education provision, reflecting policy compliance.",
+    ),
+    (
+        "ECONOMIC",
+        "Automation Productivity Shock in Industrial Sector",
+        "Introduction of CNC-integrated robotics in metalworking cooperatives has altered the direct labour coefficient for industrial inputs.",
+    ),
+    (
+        "POLITICAL",
+        "Military Subordination Protocol Successfully Executed",
+        "A routine multi-sig civilian oversight order to the High Command was authenticated by the full Defence Chamber without incident.",
+    ),
+    (
+        "CLIMATE",
+        "Cerrado Biome Carbon Sequestration Peaks",
+        "Carbon sink data from the central savannah shows above-baseline sequestration, improving the planetary boundary constraint margin.",
+    ),
+    (
+        "SOCIAL",
+        "Inter-Generational Stratification Recalibration",
+        "The sortition engine detected a minor generational imbalance in council composition, triggering a Hamilton-quota correction.",
+    ),
+    (
+        "ECONOMIC",
+        "Workers Cooperative Merger Increases 1/N Base",
+        "Two metalworking cooperatives in Paraná unite their worker rosters, expanding the eligible surplus-sharing population.",
+    ),
+    (
+        "POLITICAL",
+        "Cybernetic Budget Plebiscite Turnout Record",
+        "Anonymous token issuance for the annual macro-allocation vote broke a ten-year record.",
+    ),
+    (
+        "SOCIAL",
+        "Healthcare Distribution Normalises Across Strata",
+        "Statistical distribution of healthcare access across income strata has narrowed, indicating convergence toward the target Gini reduction trajectory.",
+    ),
+    (
+        "CLIMATE",
+        "Flood Risk Matrix Updated for Coastal Regions",
+        "LIDAR survey data reveals coastal land-use changes in Rio and Bahia states requiring updated vulnerability coefficients.",
+    ),
+    (
+        "ECONOMIC",
+        "Kantorovich Plan Identifies New Expansion Path",
+        "A Kantorovich ray-expansion calculation reveals a feasible output-expansion trajectory under current capacity constraints.",
+    ),
+    (
+        "POLITICAL",
+        "Ex-Councillor Successfully Reinstated Under Protection Lock",
+        "A citizen completing their demarchic mandate has been reinstated with the 180-day employment stability lock duly activated.",
+    ),
+    (
+        "SOCIAL",
+        "Cross-Regional Educational Equalisation Programme Begins",
+        "Federal allocative directive resources are channelled into eight low-HDI municipalities to reduce educational provision variance.",
+    ),
 )
 
 
@@ -96,39 +171,77 @@ def _hash_citizen_id(region_id: str, citizen_index: int) -> str:
     return hashlib.sha256(payload).hexdigest()[:20]
 
 
-class NationSimulationEngine:
-    POPULATION_SIZE: int = 1_000_000
-    SIMULATION_YEARS: int = 10
+class SimulationScenario(StrEnum):
+    BASELINE = "BASELINE"
+    ECOLOGICAL_STRESS = "ECOLOGICAL_STRESS"
+    POST_CRISIS_EQUALISATION = "POST_CRISIS_EQUALISATION"
 
-    def __init__(self, seed: int = 42) -> None:
+
+class NationSimulationEngine:
+    def __init__(
+        self,
+        seed: int = 42,
+        scenario: SimulationScenario = SimulationScenario.BASELINE,
+    ) -> None:
         self._base_seed = seed
+        self.scenario = scenario
         self.current_year: int = 1
         self.regions: tuple[RegionProfile, ...] = self._initialize_regions()
         self.cycles: list[GovernanceCycle] = []
         self._served_citizen_hashes: set[str] = set()
+        self.active_macro_directive: str | None = None
+        self.active_macro_bonus: float = 0.0
+
+    @property
+    def total_population(self) -> int:
+        return sum(region.population_size for region in self.regions)
+
+    @property
+    def citizens_drawn(self) -> int:
+        return len(self._served_citizen_hashes)
+
+    def set_active_macro_directive(self, directive_id: str, bonus: float = 0.015) -> None:
+        self.active_macro_directive = directive_id
+        self.active_macro_bonus = bonus
 
     def _initialize_regions(self) -> tuple[RegionProfile, ...]:
         rng = random.Random(self._base_seed)
-        return tuple(
-            RegionProfile(
-                region_id=region_id,
-                name=name,
-                lat=lat,
-                lon=lon,
-                population_size=pop,
-                hdi=round(0.55 + rng.random() * 0.35, 3),
-                gini=round(0.35 + rng.random() * 0.25, 3),
-                employment_rate=round(0.70 + rng.random() * 0.20, 3),
+        profiles: list[RegionProfile] = []
+        for region_id, name, lat, lon, pop in BRAZIL_REGIONS:
+            base_hdi = round(0.55 + rng.random() * 0.35, 3)
+            base_gini = round(0.35 + rng.random() * 0.25, 3)
+            base_emp = round(0.70 + rng.random() * 0.20, 3)
+            if self.scenario == SimulationScenario.ECOLOGICAL_STRESS:
+                if lat > -15.0:
+                    base_hdi = round(max(0.35, base_hdi - 0.08), 3)
+                    base_emp = round(max(0.50, base_emp - 0.06), 3)
+            elif self.scenario == SimulationScenario.POST_CRISIS_EQUALISATION:
+                base_gini = round(min(0.68, 0.52 + rng.random() * 0.12), 3)
+                base_emp = round(max(0.55, 0.58 + rng.random() * 0.12), 3)
+            profiles.append(
+                RegionProfile(
+                    region_id=region_id,
+                    name=name,
+                    lat=lat,
+                    lon=lon,
+                    population_size=pop,
+                    hdi=base_hdi,
+                    gini=base_gini,
+                    employment_rate=base_emp,
+                )
             )
-            for region_id, name, lat, lon, pop in BRAZIL_REGIONS
-        )
+        return tuple(profiles)
 
     def advance_year(self, event_matrix: StochasticEventMatrix) -> GovernanceCycle:
         year = self.current_year
         cycle_seed = self._base_seed * 1000 + year * 7 + 13
         events = event_matrix.generate_cycle_events(year, cycle_seed)
         governors = self._draw_governors(year, cycle_seed)
-        updated = tuple(self._apply_event_effects(r, events) for r in self.regions)
+        macro_bonus = self.active_macro_bonus if self.active_macro_directive else 0.0
+        updated = tuple(
+            self._apply_event_effects(r, events, governors=governors, macro_bonus=macro_bonus)
+            for r in self.regions
+        )
         self.regions = updated
         total_pop = sum(r.population_size for r in self.regions)
         safe_pop = max(1, total_pop)
@@ -154,50 +267,134 @@ class NationSimulationEngine:
         for portfolio in GOVERNANCE_PORTFOLIOS:
             region = rng.choice(self.regions)
             citizen_hash = self._draw_unique_citizen(rng, region)
-            slots.append(GovernorSlot(
-                portfolio=portfolio,
-                citizen_hash=citizen_hash,
-                region_id=region.region_id,
-                term_year=year,
-            ))
+            slots.append(
+                GovernorSlot(
+                    portfolio=portfolio,
+                    citizen_hash=citizen_hash,
+                    region_id=region.region_id,
+                    term_year=year,
+                )
+            )
         return tuple(slots)
 
     def _draw_unique_citizen(self, rng: random.Random, region: RegionProfile) -> str:
-        while True:
-            index = rng.randint(0, region.population_size - 1)
+        for _ in range(120):
+            index = rng.randint(0, max(0, region.population_size - 1))
             citizen_hash = _hash_citizen_id(region.region_id, index)
             if citizen_hash not in self._served_citizen_hashes:
                 self._served_citizen_hashes.add(citizen_hash)
                 return citizen_hash
+        fallback_index = len(self._served_citizen_hashes) + 1
+        fallback_hash = _hash_citizen_id(region.region_id, fallback_index)
+        self._served_citizen_hashes.add(fallback_hash)
+        return fallback_hash
 
     @staticmethod
     def _apply_event_effects(
-        region: RegionProfile, events: tuple[EmergentEvent, ...]
+        region: RegionProfile,
+        events: tuple[EmergentEvent, ...],
+        governors: tuple[GovernorSlot, ...] = (),
+        macro_bonus: float = 0.0,
     ) -> RegionProfile:
+        matching_events = [e for e in events if region.region_id in e.affected_region_ids]
+        if not matching_events and macro_bonus == 0.0:
+            return region
+
         delta_hdi = 0.0
         delta_gini = 0.0
         delta_emp = 0.0
-        for event in events:
-            if region.region_id in event.affected_region_ids:
-                delta_hdi += event.welfare_delta * 0.01
-                delta_gini -= event.welfare_delta * 0.005
-                delta_emp += event.gdp_delta * 0.02
+        governor_portfolios = {g.portfolio for g in governors if g.region_id == region.region_id}
+        for event in matching_events:
+            mitigation = (
+                0.20 if any(port in event.category for port in governor_portfolios) else 0.0
+            )
+            effective_welfare = (
+                event.welfare_delta * (1.0 - mitigation)
+                if event.welfare_delta < 0.0
+                else event.welfare_delta * (1.0 + mitigation)
+            )
+            effective_gdp = (
+                event.gdp_delta * (1.0 - mitigation)
+                if event.gdp_delta < 0.0
+                else event.gdp_delta * (1.0 + mitigation)
+            )
+            delta_hdi += effective_welfare * 0.01
+            delta_gini -= effective_welfare * 0.005
+            delta_emp += effective_gdp * 0.02
+
+        drag_hdi = (region.hdi - 0.72) * 0.004
+        drag_gini = (0.34 - region.gini) * 0.004
+        drag_emp = (region.employment_rate - 0.82) * 0.005
+
         return RegionProfile(
             region_id=region.region_id,
             name=region.name,
             lat=region.lat,
             lon=region.lon,
             population_size=region.population_size,
-            hdi=round(max(0.0, min(1.0, region.hdi + delta_hdi)), 4),
-            gini=round(max(0.0, min(1.0, region.gini + delta_gini)), 4),
-            employment_rate=round(max(0.0, min(1.0, region.employment_rate + delta_emp)), 4),
+            hdi=round(max(0.0, min(1.0, region.hdi + delta_hdi - drag_hdi + macro_bonus)), 4),
+            gini=round(max(0.0, min(1.0, region.gini + delta_gini - drag_gini)), 4),
+            employment_rate=round(
+                max(0.0, min(1.0, region.employment_rate + delta_emp - drag_emp)), 4
+            ),
         )
+
+    def export_time_series_csv(self, destination: Path) -> Path:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with destination.open("w", encoding="utf-8", newline="") as csv_file:
+            writer = csv.writer(csv_file)
+            writer.writerow(
+                [
+                    "year",
+                    "aggregate_hdi",
+                    "aggregate_gini",
+                    "aggregate_employment",
+                    "event_count",
+                    "scenario",
+                    "active_directive",
+                ]
+            )
+            for cycle in self.cycles:
+                writer.writerow(
+                    [
+                        cycle.year,
+                        cycle.aggregate_hdi,
+                        cycle.aggregate_gini,
+                        cycle.aggregate_employment,
+                        len(cycle.events),
+                        self.scenario.value,
+                        self.active_macro_directive or "",
+                    ]
+                )
+        return destination
+
+    def export_time_series_json(self, destination: Path) -> Path:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "scenario": self.scenario.value,
+            "active_directive": self.active_macro_directive,
+            "total_cycles": len(self.cycles),
+            "cycles": [
+                {
+                    "year": c.year,
+                    "aggregate_hdi": c.aggregate_hdi,
+                    "aggregate_gini": c.aggregate_gini,
+                    "aggregate_employment": c.aggregate_employment,
+                    "event_count": len(c.events),
+                }
+                for c in self.cycles
+            ],
+        }
+        destination.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        return destination
 
     def serialise_for_renderer(self) -> dict:
         base: dict = {
             "year": self.current_year,
-            "total_years": self.SIMULATION_YEARS,
-            "population_size": self.POPULATION_SIZE,
+            "population_size": self.total_population,
+            "citizens_drawn": self.citizens_drawn,
+            "scenario": self.scenario.value,
+            "active_directive": self.active_macro_directive,
             "regions": [
                 {
                     "region_id": r.region_id,

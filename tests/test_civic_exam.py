@@ -318,3 +318,10 @@ class TestNextDueAfterPassLeapYear:
         assert result is not None
         assert result.year == 2025
         assert result.month == 2
+
+    def test_feb29_dob_non_leap_century_limit(self) -> None:
+        dob = date(2040, 2, 29)
+        taken = date(2060, 1, 1)
+        result = _next_due_after_pass(taken, dob)
+        assert result is not None
+        assert result.year == 2065

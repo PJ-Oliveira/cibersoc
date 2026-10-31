@@ -13,6 +13,7 @@ from cibersoc.simulation.engine import (
     GovernorSlot,
     NationSimulationEngine,
     RegionProfile,
+    SimulationScenario,
     StochasticEventMatrix,
     _hash_citizen_id,
 )
@@ -123,7 +124,7 @@ class TestAdvanceYear:
         matrix = _make_matrix()
         engine.advance_year(matrix)
         new_hdis = tuple(r.hdi for r in engine.regions)
-        assert original_hdis != new_hdis or True
+        assert original_hdis != new_hdis
 
     def test_full_ten_year_run(self) -> None:
         engine = _make_engine()
@@ -133,6 +134,20 @@ class TestAdvanceYear:
             assert cycle.year == year
         assert engine.current_year == 11
         assert len(engine.cycles) == 10
+
+    def test_runs_far_beyond_ten_years(self) -> None:
+        engine = _make_engine()
+        matrix = _make_matrix()
+        for year in range(1, 121):
+            cycle = engine.advance_year(matrix)
+            assert cycle.year == year
+        assert engine.current_year == 121
+        assert len(engine.cycles) == 120
+        for region in engine.regions:
+            assert 0.0 <= region.hdi <= 1.0
+            assert 0.0 <= region.gini <= 1.0
+            assert 0.0 <= region.employment_rate <= 1.0
+        assert engine.serialise_for_renderer()["year"] == 121
 
 
 class TestApplyEventEffects:
@@ -233,15 +248,27 @@ class TestSerialiseForRenderer:
         assert data["latest_cycle"] is not None
         assert "aggregate_hdi" in data["latest_cycle"]
 
-    def test_population_size_constant(self) -> None:
+    def test_population_size_is_sum_of_regions(self) -> None:
         engine = _make_engine()
         data = engine.serialise_for_renderer()
-        assert data["population_size"] == NationSimulationEngine.POPULATION_SIZE
+        assert data["population_size"] == sum(r[4] for r in BRAZIL_REGIONS)
+        assert data["population_size"] == engine.total_population
 
-    def test_total_years_constant(self) -> None:
+    def test_no_year_cap_in_payload(self) -> None:
         engine = _make_engine()
         data = engine.serialise_for_renderer()
-        assert data["total_years"] == NationSimulationEngine.SIMULATION_YEARS
+        assert "total_years" not in data
+        assert not hasattr(NationSimulationEngine, "SIMULATION_YEARS")
+
+    def test_citizens_drawn_counts_served_citizens(self) -> None:
+        engine = _make_engine()
+        matrix = _make_matrix()
+        assert engine.serialise_for_renderer()["citizens_drawn"] == 0
+        engine.advance_year(matrix)
+        engine.advance_year(matrix)
+        data = engine.serialise_for_renderer()
+        assert data["citizens_drawn"] == 2 * len(GOVERNANCE_PORTFOLIOS)
+        assert data["citizens_drawn"] == engine.citizens_drawn
 
     def test_region_dict_has_expected_keys(self) -> None:
         engine = _make_engine()
@@ -274,6 +301,109 @@ class TestDrawUniqueCitizen:
         assert result == _hash_citizen_id("BR-TS", 1)
         assert first_hash in engine._served_citizen_hashes
         assert result in engine._served_citizen_hashes
+
+    def test_exhaustion_fallback(self) -> None:
+        import random as _random
+
+        class _AlwaysZeroRng(_random.Random):
+            def randint(self, a: int, b: int) -> int:
+                return 0
+
+        region = RegionProfile("BR-TS", "TestState", 0.0, 0.0, 1, 0.7, 0.45, 0.80)
+        engine = _make_engine()
+        engine._served_citizen_hashes.add(_hash_citizen_id("BR-TS", 0))
+        rng = _AlwaysZeroRng()
+        result = engine._draw_unique_citizen(rng, region)
+        assert result.startswith("98b") or len(result) == 20
+        assert result in engine._served_citizen_hashes
+
+
+class TestSimulationScenario:
+    def test_scenarios_initialize_distinct_metrics(self) -> None:
+        base = NationSimulationEngine(seed=42, scenario=SimulationScenario.BASELINE)
+        eco = NationSimulationEngine(seed=42, scenario=SimulationScenario.ECOLOGICAL_STRESS)
+        crisis = NationSimulationEngine(seed=42, scenario=SimulationScenario.POST_CRISIS_EQUALISATION)
+
+        assert base.scenario == SimulationScenario.BASELINE
+        assert eco.scenario == SimulationScenario.ECOLOGICAL_STRESS
+        assert crisis.scenario == SimulationScenario.POST_CRISIS_EQUALISATION
+
+        base_north = [r for r in base.regions if r.lat > -15.0]
+        eco_north = [r for r in eco.regions if r.lat > -15.0]
+        assert all(e.hdi <= b.hdi for b, e in zip(base_north, eco_north))
+
+        base_gini = sum(r.gini for r in base.regions) / len(base.regions)
+        crisis_gini = sum(r.gini for r in crisis.regions) / len(crisis.regions)
+        assert crisis_gini > base_gini
+
+
+class TestEnginePoliciesAndExports:
+    def test_set_active_macro_directive(self) -> None:
+        engine = _make_engine()
+        assert engine.active_macro_directive is None
+        engine.set_active_macro_directive("option.FLOW-HEALTH-PLUSS", bonus=0.03)
+        assert engine.active_macro_directive == "option.FLOW-HEALTH-PLUSS"
+        assert engine.active_macro_bonus == 0.03
+        data = engine.serialise_for_renderer()
+        assert data["active_directive"] == "option.FLOW-HEALTH-PLUSS"
+        assert data["scenario"] == "BASELINE"
+
+    def test_governor_oversight_mitigation(self) -> None:
+        region = RegionProfile("BR-SP", "São Paulo", -23.55, -46.63, 45_000_000, 0.70, 0.35, 0.80)
+        event_neg = EmergentEvent(
+            event_id="EVT-01-NEG",
+            category="ECONOMIC",
+            title="Crisis",
+            narrative="...",
+            affected_region_ids=("BR-SP",),
+            severity=0.5,
+            gdp_delta=-2.0,
+            welfare_delta=-2.0,
+        )
+        without_gov = NationSimulationEngine._apply_event_effects(region, (event_neg,), ())
+        gov = GovernorSlot("ECONOMIC", "hash-1", "BR-SP", 1)
+        with_gov = NationSimulationEngine._apply_event_effects(region, (event_neg,), (gov,))
+        assert with_gov.hdi > without_gov.hdi
+        assert with_gov.employment_rate > without_gov.employment_rate
+
+        event_pos = EmergentEvent(
+            event_id="EVT-01-POS",
+            category="ECONOMIC",
+            title="Boom",
+            narrative="...",
+            affected_region_ids=("BR-SP",),
+            severity=0.5,
+            gdp_delta=2.0,
+            welfare_delta=2.0,
+        )
+        pos_without = NationSimulationEngine._apply_event_effects(region, (event_pos,), ())
+        pos_with = NationSimulationEngine._apply_event_effects(region, (event_pos,), (gov,))
+        assert pos_with.hdi > pos_without.hdi
+
+    def test_export_time_series_csv_and_json(self, tmp_path) -> None:
+        engine = _make_engine()
+        matrix = _make_matrix()
+        engine.set_active_macro_directive("option.FLOW-TEST", bonus=0.02)
+        engine.advance_year(matrix)
+        engine.advance_year(matrix)
+
+        csv_path = tmp_path / "exports" / "history.csv"
+        out_csv = engine.export_time_series_csv(csv_path)
+        assert out_csv.exists()
+        csv_text = out_csv.read_text(encoding="utf-8")
+        assert "aggregate_hdi" in csv_text
+        assert "option.FLOW-TEST" in csv_text
+        assert len(csv_text.strip().splitlines()) == 3
+
+        json_path = tmp_path / "exports" / "history.json"
+        out_json = engine.export_time_series_json(json_path)
+        assert out_json.exists()
+        import json as _json
+
+        data = _json.loads(out_json.read_text(encoding="utf-8"))
+        assert data["total_cycles"] == 2
+        assert data["scenario"] == "BASELINE"
+        assert len(data["cycles"]) == 2
 
 
 class TestStochasticEventMatrix:
@@ -349,9 +479,10 @@ class TestGovernanceCycleDataclass:
         engine = _make_engine()
         matrix = _make_matrix()
         all_hashes: list[str] = []
-        for _ in range(NationSimulationEngine.SIMULATION_YEARS):
+        for _ in range(60):
             cycle = engine.advance_year(matrix)
             all_hashes.extend(g.citizen_hash for g in cycle.governors)
+        assert len(all_hashes) == 60 * len(GOVERNANCE_PORTFOLIOS)
         assert len(all_hashes) == len(set(all_hashes))
 
     def test_served_hashes_accumulate_across_cycles(self) -> None:
@@ -406,13 +537,66 @@ class TestSimulationView:
         assert tab._sim_engine.current_year == 2
         assert len(tab._sim_engine.cycles) == 1
 
-    def test_advance_year_past_limit_noop(self, qtbot) -> None:
+    def test_advance_year_past_ten_years_is_allowed(self, qtbot) -> None:
         from cibersoc.ui.simulation_view import SimulationTab
         tab = SimulationTab()
         qtbot.addWidget(tab)
         tab._sim_engine.current_year = 11
         tab._on_advance_year()
-        assert tab._sim_engine.current_year == 11
+        assert tab._sim_engine.current_year == 12
+        assert tab._sim_engine.cycles[-1].year == 11
+        assert "Year 12" in tab.lbl_status_year.text()
+
+    def test_years_per_step_advances_many_years(self, qtbot) -> None:
+        from cibersoc.ui.simulation_view import SimulationTab
+        tab = SimulationTab()
+        qtbot.addWidget(tab)
+        tab.set_button_texts("Advance Year", "Reset")
+        assert tab.btn_advance_year.text() == "Advance Year"
+        tab.spn_years_step.setValue(25)
+        assert tab.btn_advance_year.text() == "Advance 25 Years"
+        tab._on_advance_year()
+        assert tab._sim_engine.current_year == 26
+        assert len(tab._sim_engine.cycles) == 25
+        tab.spn_years_step.setValue(1)
+        assert tab.btn_advance_year.text() == "Advance Year"
+
+    def test_years_per_step_has_no_total_cap(self, qtbot) -> None:
+        from cibersoc.ui.simulation_view import YEARS_PER_STEP_LIMIT, SimulationTab
+        tab = SimulationTab()
+        qtbot.addWidget(tab)
+        tab.spn_years_step.setValue(YEARS_PER_STEP_LIMIT)
+        tab._on_advance_year()
+        tab._on_advance_year()
+        assert tab._sim_engine.current_year == 2 * YEARS_PER_STEP_LIMIT + 1
+
+    def test_status_shows_population_and_citizens_drawn(self, qtbot) -> None:
+        from cibersoc.ui.simulation_view import SimulationTab
+        tab = SimulationTab()
+        qtbot.addWidget(tab)
+        total = f"{sum(r[4] for r in BRAZIL_REGIONS):,}"
+        assert f"Population: {total}" in tab.lbl_status_year.text()
+        assert "Citizens drawn: 0" in tab.lbl_status_year.text()
+        assert "/ 10" not in tab.lbl_status_year.text()
+        tab._on_advance_year()
+        assert f"Citizens drawn: {len(GOVERNANCE_PORTFOLIOS)}" in tab.lbl_status_year.text()
+
+    def test_apply_translations_switches_language(self, qtbot) -> None:
+        from cibersoc.i18n.translator import LocalizationCatalog, SupportedLocale
+        from cibersoc.ui.simulation_view import SimulationTab
+        tab = SimulationTab()
+        qtbot.addWidget(tab)
+        catalog = LocalizationCatalog(SupportedLocale.PORTUGUESE)
+        tab.apply_translations(catalog)
+        assert tab.lbl_years_step.text() == "Anos por passo:"
+        assert tab.lbl_status_metrics.text() == "Avance um ano para iniciar a simulação."
+        assert "150.700.000" in tab.lbl_status_year.text()
+        tab._on_advance_year()
+        assert "IDH:" in tab.lbl_status_metrics.text()
+        assert "," in tab.lbl_status_metrics.text().split("GINI:")[1]
+        tab.set_button_texts("Avançar Ano", "Reiniciar")
+        tab.spn_years_step.setValue(3)
+        assert tab.btn_advance_year.text() == "Avançar 3 Anos"
 
     def test_reset_restores_year(self, qtbot) -> None:
         from cibersoc.ui.simulation_view import SimulationTab
@@ -482,6 +666,103 @@ class TestSimulationView:
         assert '{"year":2}' in calls[0]
 
 
+class TestViewerLegend:
+    def test_html_keys_exist_in_catalogue_for_all_languages(self) -> None:
+        import re
+
+        from cibersoc.i18n.translator import LocalizationCatalog, SupportedLocale
+        from cibersoc.ui import simulation_view as sv
+
+        used = set(re.findall(r'data-i18n(?:-term)?="([a-z_]+)"', sv._THREE_JS_HTML))
+        assert used
+        assert used <= set(sv.VIEWER_TEXT_KEYS)
+        for locale in SupportedLocale:
+            catalog = LocalizationCatalog(locale)
+            for key in sv.VIEWER_TEXT_KEYS:
+                assert catalog.translate(f"simulation.viewer.{key}").strip()
+            for key in sv.STATUS_TEXT_KEYS:
+                assert catalog.translate(f"simulation.{key}").strip()
+
+    def test_legend_explains_rings_particles_and_indicators(self) -> None:
+        from cibersoc.i18n.translator import LocalizationCatalog, SupportedLocale
+
+        for locale in SupportedLocale:
+            catalog = LocalizationCatalog(locale)
+            rings = catalog.translate("simulation.viewer.legend_rings_text")
+            particles = catalog.translate("simulation.viewer.legend_particles_text")
+            assert rings != particles
+            for term_key in ("gl_population", "gl_citizens", "gl_hdi", "gl_gini", "gl_employment"):
+                entry = catalog.translate(f"simulation.viewer.{term_key}")
+                assert ":" in entry
+
+    def test_html_has_no_year_cap_and_uses_new_hud_fields(self) -> None:
+        from cibersoc.ui import simulation_view as sv
+
+        assert "total_years" not in sv._THREE_JS_HTML
+        assert "1 / 10" not in sv._THREE_JS_HTML
+        assert "citizens_drawn" in sv._THREE_JS_HTML
+        assert "window.updateHud" in sv._THREE_JS_HTML
+        assert "window.applyI18n" in sv._THREE_JS_HTML
+
+    def test_push_viewer_texts_sends_strings_once(self, qtbot) -> None:
+        import json
+
+        from cibersoc.ui.simulation_view import SimulationTab
+
+        tab = SimulationTab()
+        qtbot.addWidget(tab)
+        calls: list[str] = []
+
+        class _FakePage:
+            def runJavaScript(self, js: str) -> None:
+                calls.append(js)
+
+        class _FakeWidget:
+            def page(self) -> _FakePage:
+                return _FakePage()
+
+        tab._has_webengine = True
+        tab._render_widget = _FakeWidget()
+        tab._push_viewer_texts()
+        assert len(calls) == 1
+        assert calls[0].startswith("if(window.applyI18n){applyI18n(")
+        payload = calls[0][len("if(window.applyI18n){applyI18n("):-len(");}")]
+        assert json.loads(payload)["number_locale"] == "en-GB"
+
+    def test_page_loaded_pushes_texts_then_data(self, qtbot) -> None:
+        from PySide6.QtCore import Signal
+        from PySide6.QtWidgets import QWidget
+
+        from cibersoc.ui import simulation_view as sv
+
+        calls: list[str] = []
+
+        class _FakePage:
+            def runJavaScript(self, js: str) -> None:
+                calls.append(js)
+
+        class _FakeView(QWidget):
+            loadFinished = Signal(bool)
+
+            def page(self) -> _FakePage:
+                return _FakePage()
+
+        previous_factory = sv._create_render_widget
+        sv._create_render_widget = lambda html: (_FakeView(), True)
+        try:
+            tab = sv.SimulationTab()
+        finally:
+            sv._create_render_widget = previous_factory
+        qtbot.addWidget(tab)
+        calls.clear()
+        tab._render_widget.loadFinished.emit(False)
+        assert calls == []
+        tab._render_widget.loadFinished.emit(True)
+        assert len(calls) == 2
+        assert "applyI18n" in calls[0]
+        assert "updateHud" in calls[1] and "updateSimulation" in calls[1]
+
+
 class TestCreateRenderWidget:
     def test_fallback_when_webengine_missing(self) -> None:
         from importlib import reload
@@ -516,7 +797,7 @@ class TestCreateRenderWidget:
             def __init__(self) -> None:
                 self._html: str = ""
 
-            def setHtml(self, html: str) -> None:
+            def setHtml(self, html: str, baseUrl: Any = None) -> None:
                 self._html = html
 
         class _FakeModule:
@@ -535,3 +816,79 @@ class TestCreateRenderWidget:
             reload(sv)
         assert flag is True
         assert isinstance(widget, _FakeView)
+
+
+def test_simulation_tab_scenario_switching_and_export(tmp_path: Path) -> None:
+    from pathlib import Path
+    from PySide6.QtWidgets import QApplication, QFileDialog
+    from cibersoc.i18n.translator import LocalizationCatalog, SupportedLocale
+    from cibersoc.ui.simulation_view import SimulationTab
+
+    _ = QApplication.instance() or QApplication([])
+    translator = LocalizationCatalog(SupportedLocale.ENGLISH_UK)
+    tab = SimulationTab(translator=translator)
+
+    assert tab.cmb_scenario.count() == 3
+    tab.cmb_scenario.setCurrentIndex(1)
+    assert tab._sim_engine.scenario == SimulationScenario.ECOLOGICAL_STRESS
+
+    tab.cmb_scenario.setCurrentIndex(2)
+    assert tab._sim_engine.scenario == SimulationScenario.POST_CRISIS_EQUALISATION
+
+    tab._on_reset()
+    assert tab._sim_engine.scenario == SimulationScenario.POST_CRISIS_EQUALISATION
+
+    tab.set_active_macro_directive("FLOW-EDU-PLUS5")
+    assert tab._sim_engine.active_macro_directive == "FLOW-EDU-PLUS5"
+
+    tab._sim_engine.advance_year(tab._event_matrix)
+
+    csv_out = tmp_path / "test_sim.csv"
+    json_out = tmp_path / "test_sim.json"
+
+    orig_get_save = QFileDialog.getSaveFileName
+    try:
+        QFileDialog.getSaveFileName = staticmethod(
+            lambda parent, caption, default, filter: (str(csv_out), "CSV")
+        )
+        tab._on_export_csv()
+        assert csv_out.exists()
+
+        QFileDialog.getSaveFileName = staticmethod(
+            lambda parent, caption, default, filter: (str(json_out), "JSON")
+        )
+        tab._on_export_json()
+        assert json_out.exists()
+
+        QFileDialog.getSaveFileName = staticmethod(
+            lambda parent, caption, default, filter: ("", "")
+        )
+        tab._on_export_csv()
+        tab._on_export_json()
+    finally:
+        QFileDialog.getSaveFileName = orig_get_save
+
+    tab.cmb_scenario.setCurrentIndex(0)
+    tab.apply_translations(translator)
+    assert tab.cmb_scenario.currentIndex() == 0
+
+    tab.cmb_scenario.setCurrentIndex(-1)
+    tab.apply_translations(translator)
+    assert tab.cmb_scenario.currentIndex() == 0
+
+    tab.cmb_scenario.setItemData(0, "INVALID_SCENARIO")
+    tab._on_scenario_changed(0)
+    tab._on_reset()
+    assert tab._sim_engine.scenario == SimulationScenario.BASELINE
+
+
+def test_simulation_orchestrator_directive_none() -> None:
+    from cibersoc.ui.state import SimulationOrchestrator
+
+    orch = SimulationOrchestrator.__new__(SimulationOrchestrator)
+    orch.last_directive = None
+    assert orch.active_macro_directive is None
+
+    orch_live = SimulationOrchestrator()
+    assert orch_live.active_macro_directive is not None
+

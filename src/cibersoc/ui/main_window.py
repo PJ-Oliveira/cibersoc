@@ -4,14 +4,15 @@ from collections.abc import Callable
 from decimal import Decimal
 from enum import StrEnum
 from pathlib import Path
+from typing import Any
 import sys
 
 from PySide6.QtCore import QSettings, QSize, QTimer, QUrl, Qt
 from PySide6.QtGui import (
+    QDesktopServices,
     QFont,
     QFontDatabase,
     QFontMetrics,
-    QGuiApplication,
     QKeySequence,
     QResizeEvent,
     QShortcut,
@@ -22,6 +23,8 @@ from PySide6.QtWidgets import (
     QApplication,
     QBoxLayout,
     QComboBox,
+    QDialog,
+    QFileDialog,
     QFrame,
     QGroupBox,
     QHBoxLayout,
@@ -67,9 +70,9 @@ from .theme import (
     font_scale_factor,
 )
 
-
 COMPACT_LAYOUT_BREAKPOINT: int = 960
 FONT_SETTINGS_KEY: str = "ui/font_points"
+LOCALE_SETTINGS_KEY: str = "ui/active_locale"
 BUNDLED_FONT_DIRECTORY: Path = Path(__file__).resolve().parent / "assets" / "fonts"
 
 
@@ -81,7 +84,9 @@ class ResponsiveLayoutMode(StrEnum):
 def compute_adaptive_window_size(available_width: int, available_height: int) -> tuple[int, int]:
     clamped_width = max(640, min(1320, int(available_width * 0.88)))
     clamped_height = max(480, min(880, int(available_height * 0.88)))
-    return min(clamped_width, max(640, available_width)), min(clamped_height, max(480, available_height))
+    return min(clamped_width, max(640, available_width)), min(
+        clamped_height, max(480, available_height)
+    )
 
 
 def register_bundled_fonts(directory: Path | None = None) -> tuple[int, ...]:
@@ -119,13 +124,18 @@ class ResponsivePushButton(QPushButton):
     def _apply_elision(self) -> None:
         metrics = self.fontMetrics()
         available_width = max(24, self.width() - 2 * metrics.height())
-        elided_text = metrics.elidedText(self._full_text, Qt.TextElideMode.ElideRight, available_width)
+        elided_text = metrics.elidedText(
+            self._full_text, Qt.TextElideMode.ElideRight, available_width
+        )
         if elided_text != self.text():
             QPushButton.setText(self, elided_text)
 
     def minimumSizeHint(self) -> QSize:
         natural_hint = super().minimumSizeHint()
-        return QSize(min(self.fontMetrics().horizontalAdvance("M") * 10, natural_hint.width()), natural_hint.height())
+        return QSize(
+            min(self.fontMetrics().horizontalAdvance("M") * 10, natural_hint.width()),
+            natural_hint.height(),
+        )
 
 
 class ResponsiveGroupBox(QGroupBox):
@@ -148,13 +158,24 @@ class CiberSocMainWindow(QMainWindow):
         if font_points is not None:
             initial_font_points = font_points
         elif settings is not None:
-            initial_font_points = int(settings.value(FONT_SETTINGS_KEY, DEFAULT_FONT_POINTS))
+            initial_font_points = int(str(settings.value(FONT_SETTINGS_KEY, DEFAULT_FONT_POINTS)))
         else:
             initial_font_points = DEFAULT_FONT_POINTS
         self._font_points: int = clamp_font_points(initial_font_points)
         self._line_height: int = 0
         self.orchestrator = orchestrator or SimulationOrchestrator()
-        self.translator = translator or LocalizationCatalog(SupportedLocale.ENGLISH_UK)
+        if translator is not None:
+            active_translator = translator
+        elif settings is not None:
+            saved_code = str(settings.value(LOCALE_SETTINGS_KEY, ""))
+            matched = next(
+                (loc for loc in SupportedLocale if loc.value == saved_code),
+                SupportedLocale.ENGLISH_UK,
+            )
+            active_translator = LocalizationCatalog(matched)
+        else:
+            active_translator = LocalizationCatalog(SupportedLocale.ENGLISH_UK)
+        self.translator = active_translator
         self.translator.register_locale_listener(self._on_locale_changed)
         self._current_doc_path: Path = self.orchestrator.cibersoc_root / "README.md"
 
@@ -248,6 +269,16 @@ class CiberSocMainWindow(QMainWindow):
             self._bind_shortcut(QKeySequence.StandardKey.ZoomOut, self.decrease_font_size),
             self._bind_shortcut(QKeySequence("Ctrl+0"), self.reset_font_size),
         )
+        self._navigation_shortcuts: tuple[QShortcut, ...] = (
+            self._bind_shortcut(Qt.Key.Key_F1, self._show_shortcuts_dialog),
+            self._bind_shortcut(QKeySequence("?"), self._show_shortcuts_dialog),
+            self._bind_shortcut(QKeySequence("Ctrl+1"), lambda: self.tabs.setCurrentIndex(0)),
+            self._bind_shortcut(QKeySequence("Ctrl+2"), lambda: self.tabs.setCurrentIndex(1)),
+            self._bind_shortcut(QKeySequence("Ctrl+3"), lambda: self.tabs.setCurrentIndex(2)),
+            self._bind_shortcut(QKeySequence("Ctrl+4"), lambda: self.tabs.setCurrentIndex(3)),
+            self._bind_shortcut(QKeySequence("Ctrl+5"), lambda: self.tabs.setCurrentIndex(4)),
+            self._bind_shortcut(QKeySequence("Ctrl+6"), lambda: self.tabs.setCurrentIndex(5)),
+        )
         self.header_box_layout.addLayout(controls_column)
         root_layout.addWidget(header_frame)
 
@@ -277,6 +308,7 @@ class CiberSocMainWindow(QMainWindow):
         )
         for table in self._responsive_tables:
             table.setWordWrap(True)
+            table.setAlternatingRowColors(True)
             table.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
             table.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
             table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
@@ -296,11 +328,60 @@ class CiberSocMainWindow(QMainWindow):
         self.refresh_all_views()
         self.apply_responsive_layout(self.width(), self.height())
 
-    def _bind_shortcut(self, key_sequence: QKeySequence | QKeySequence.StandardKey, handler: Callable[[], None]) -> QShortcut:
+    def _bind_shortcut(
+        self,
+        key_sequence: QKeySequence | QKeySequence.StandardKey | Qt.Key | str,
+        handler: Callable[[], Any],
+    ) -> QShortcut:
         shortcut = QShortcut(QKeySequence(key_sequence), self)
         shortcut.setContext(Qt.ShortcutContext.WindowShortcut)
         shortcut.activated.connect(handler)
         return shortcut
+
+    def _show_shortcuts_dialog(self) -> None:
+        t = self.translator.translate
+        dialog = QDialog(self)
+        dialog.setWindowTitle(t("dialog.shortcuts_title"))
+        dialog.setMinimumWidth(440)
+        dialog_layout = QVBoxLayout(dialog)
+        dialog_layout.setContentsMargins(16, 16, 16, 16)
+        dialog_layout.setSpacing(10)
+
+        intro = QLabel(t("dialog.shortcuts_intro"))
+        intro.setObjectName("SectionHeading")
+        dialog_layout.addWidget(intro)
+
+        table = QTableWidget(5, 2, dialog)
+        table.setHorizontalHeaderLabels(["Shortcut", "Action"])
+        table.horizontalHeader().setStretchLastSection(True)
+        table.verticalHeader().setVisible(False)
+        table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+
+        shortcuts = [
+            ("F1 / ?", t("shortcuts.f1")),
+            ("Ctrl+1..6", t("shortcuts.tab_switch")),
+            ("F11", t("shortcuts.fullscreen")),
+            ("+ / -", t("shortcuts.zoom")),
+            ("Alt+Up / Alt+Down", t("shortcuts.inspect")),
+        ]
+        for row, (key, desc) in enumerate(shortcuts):
+            k_item = QTableWidgetItem(key)
+            k_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            d_item = QTableWidgetItem(desc)
+            table.setItem(row, 0, k_item)
+            table.setItem(row, 1, d_item)
+
+        dialog_layout.addWidget(table)
+
+        btn_row = QHBoxLayout()
+        btn_row.addStretch(1)
+        btn_close = QPushButton(t("dialog.shortcuts_close"))
+        btn_close.clicked.connect(dialog.accept)
+        btn_row.addWidget(btn_close)
+        dialog_layout.addLayout(btn_row)
+
+        dialog.exec()
 
     @property
     def font_points(self) -> int:
@@ -335,8 +416,12 @@ class CiberSocMainWindow(QMainWindow):
             return
         available_geometry = self.screen().availableGeometry()
         ratio = target_points / previous_points
-        scaled_width = min(available_geometry.width(), max(self.minimumWidth(), int(self.width() * ratio)))
-        scaled_height = min(available_geometry.height(), max(self.minimumHeight(), int(self.height() * ratio)))
+        scaled_width = min(
+            available_geometry.width(), max(self.minimumWidth(), int(self.width() * ratio))
+        )
+        scaled_height = min(
+            available_geometry.height(), max(self.minimumHeight(), int(self.height() * ratio))
+        )
         self.resize(scaled_width, scaled_height)
 
     def _apply_font_to_widgets(self) -> None:
@@ -358,7 +443,9 @@ class CiberSocMainWindow(QMainWindow):
         self.txt_readme_browser.setMinimumHeight(line_height * 10 + 16)
         self.btn_font_decrease.setEnabled(self._font_points > MIN_FONT_POINTS)
         self.btn_font_increase.setEnabled(self._font_points < MAX_FONT_POINTS)
-        self.lbl_font_size.setText(self.translator.translate("header.font_label", points=self._font_points))
+        self.lbl_font_size.setText(
+            self.translator.translate("header.font_label", points=self._font_points)
+        )
         self._load_document_file(self._current_doc_path)
 
     def _add_scrollable_tab(self, workspace: QWidget) -> None:
@@ -675,7 +762,7 @@ class CiberSocMainWindow(QMainWindow):
         self._add_scrollable_tab(workspace)
 
     def _build_simulation_workspace(self) -> None:
-        self.simulation_tab = SimulationTab()
+        self.simulation_tab = SimulationTab(translator=self.translator)
         self._add_scrollable_tab(self.simulation_tab)
 
     def _resolve_doc_path_for_key(self, doc_key: str) -> Path:
@@ -730,6 +817,9 @@ class CiberSocMainWindow(QMainWindow):
     def _on_open_readme_clicked(self) -> None:
         readme_index = self.cmb_doc_selector.findData("README.md")
         self.cmb_doc_selector.setCurrentIndex(readme_index)
+        readme_path = (self.orchestrator.cibersoc_root / "README.md").resolve()
+        self._load_document_file(readme_path)
+        self._open_file_in_desktop(readme_path)
 
     def _on_doc_anchor_clicked(self, url: QUrl) -> None:
         clean_url = url.toString().split("#")[0].strip()
@@ -748,7 +838,9 @@ class CiberSocMainWindow(QMainWindow):
         super().resizeEvent(event)
         self.apply_responsive_layout(self.width(), self.height())
 
-    def apply_responsive_layout(self, viewport_width: int, viewport_height: int) -> ResponsiveLayoutMode:
+    def apply_responsive_layout(
+        self, viewport_width: int, viewport_height: int
+    ) -> ResponsiveLayoutMode:
         target_mode = (
             ResponsiveLayoutMode.COMPACT
             if viewport_width < COMPACT_LAYOUT_BREAKPOINT
@@ -757,7 +849,9 @@ class CiberSocMainWindow(QMainWindow):
         if target_mode != self.current_layout_mode:
             self.current_layout_mode = target_mode
             is_compact = target_mode == ResponsiveLayoutMode.COMPACT
-            splitter_orientation = Qt.Orientation.Vertical if is_compact else Qt.Orientation.Horizontal
+            splitter_orientation = (
+                Qt.Orientation.Vertical if is_compact else Qt.Orientation.Horizontal
+            )
             box_direction = (
                 QBoxLayout.Direction.TopToBottom if is_compact else QBoxLayout.Direction.LeftToRight
             )
@@ -796,7 +890,8 @@ class CiberSocMainWindow(QMainWindow):
             self.cmb_language.blockSignals(False)
         self.retranslate_static_labels()
         self.refresh_all_views()
-        self._sync_fullhd_wallpaper_locale(active_locale)
+        if self._settings is not None:
+            self._settings.setValue(LOCALE_SETTINGS_KEY, active_locale.value)
 
     def retranslate_static_labels(self) -> None:
         t = self.translator.translate
@@ -804,6 +899,7 @@ class CiberSocMainWindow(QMainWindow):
         self.lbl_system_title.setText(t("header.title"))
         self.lbl_system_subtitle.setText(t("header.subtitle"))
         self.lbl_language_prompt.setText(t("header.language_label"))
+        self.cmb_language.setToolTip(t("header.language_label"))
         self.lbl_font_size.setText(t("header.font_label", points=self._font_points))
         self.btn_font_decrease.setToolTip(t("header.font_decrease_tip"))
         self.btn_font_increase.setToolTip(t("header.font_increase_tip"))
@@ -815,16 +911,28 @@ class CiberSocMainWindow(QMainWindow):
         self.tabs.setTabText(3, t("tabs.enterprise"))
         self.tabs.setTabText(4, t("tabs.charter_docs"))
         self.tabs.setTabText(5, t("tabs.simulation"))
+        self.tabs.setTabToolTip(0, t("tabs.councils"))
+        self.tabs.setTabToolTip(1, t("tabs.sortition"))
+        self.tabs.setTabToolTip(2, t("tabs.cybernetics"))
+        self.tabs.setTabToolTip(3, t("tabs.enterprise"))
+        self.tabs.setTabToolTip(4, t("tabs.charter_docs"))
+        self.tabs.setTabToolTip(5, t("tabs.simulation"))
 
         self.grp_mesh.setTitle(t("councils.mesh_group"))
         self.lbl_inspect_tier.setText(t("councils.inspect_label"))
+        self.cmb_council.setToolTip(t("councils.inspect_label"))
         self.btn_escalate_demand.setText(t("councils.btn_escalate_demand"))
         self.grp_secretary.setTitle(t("councils.sg_group"))
         self.btn_sg_authenticate.setText(t("councils.btn_sg_authenticate"))
         self.btn_sg_veto_test.setText(t("councils.btn_sg_veto_test"))
         self.grp_ministries.setTitle(t("councils.ministries_group"))
         self.tbl_ministries.setHorizontalHeaderLabels(
-            [t("councils.col_portfolio"), t("councils.col_lead"), t("councils.col_bond"), t("councils.col_members")]
+            [
+                t("councils.col_portfolio"),
+                t("councils.col_lead"),
+                t("councils.col_bond"),
+                t("councils.col_members"),
+            ]
         )
         self.grp_defence.setTitle(t("councils.defence_group"))
         self.btn_defence_order.setText(t("councils.btn_defence_order"))
@@ -899,6 +1007,7 @@ class CiberSocMainWindow(QMainWindow):
             t("simulation.btn_advance_year"),
             t("simulation.btn_reset"),
         )
+        self.simulation_tab.apply_translations(self.translator)
 
         current_doc_key = self.cmb_doc_selector.currentData() or "README.md"
         self.cmb_doc_selector.blockSignals(True)
@@ -1040,6 +1149,7 @@ class CiberSocMainWindow(QMainWindow):
         self._refresh_enterprise_and_mandate_tab()
         self._refresh_charter_panel()
         self._refresh_audit_log()
+        self.simulation_tab.set_active_macro_directive(self.orchestrator.active_macro_directive or "")
 
     def _refresh_council_inspector(self, council_id: str) -> None:
         t = self.translator.translate
@@ -1062,7 +1172,11 @@ class CiberSocMainWindow(QMainWindow):
                 seats=prop_metric.assigned_seats,
                 aggregate=prop_metric.sectoral_base_aggregate,
                 ratio=f"{prop_metric.proportionality_ratio:.2f}",
-                status=t("proof.valid") if prop_metric.is_mathematically_proportional else t("proof.invalid"),
+                status=(
+                    t("proof.valid")
+                    if prop_metric.is_mathematically_proportional
+                    else t("proof.invalid")
+                ),
                 rationale=prop_metric.rationale,
             )
         )
@@ -1072,8 +1186,12 @@ class CiberSocMainWindow(QMainWindow):
         for row_index, (portfolio, chamber_members) in enumerate(portfolios):
             lead = chamber_members[0]
             bond_label = t("bond.military") if lead.is_military_personnel else t("bond.civilian")
-            self.tbl_ministries.setItem(row_index, 0, QTableWidgetItem(t(f"portfolio.{portfolio.value}")))
-            self.tbl_ministries.setItem(row_index, 1, QTableWidgetItem(f"{lead.citizen_id} ({lead.full_name})"))
+            self.tbl_ministries.setItem(
+                row_index, 0, QTableWidgetItem(t(f"portfolio.{portfolio.value}"))
+            )
+            self.tbl_ministries.setItem(
+                row_index, 1, QTableWidgetItem(f"{lead.citizen_id} ({lead.full_name})")
+            )
             self.tbl_ministries.setItem(row_index, 2, QTableWidgetItem(bond_label))
             self.tbl_ministries.setItem(row_index, 3, QTableWidgetItem(str(len(chamber_members))))
 
@@ -1110,7 +1228,9 @@ class CiberSocMainWindow(QMainWindow):
             status_text = t("proof.valid") if is_valid else t("proof.invalid")
             self.tbl_proofs.setItem(row_index, 0, QTableWidgetItem(council.council_id))
             self.tbl_proofs.setItem(row_index, 1, QTableWidgetItem(str(proof.cycle_number)))
-            self.tbl_proofs.setItem(row_index, 2, QTableWidgetItem(f"{proof.eligible_merkle_root[:20]}..."))
+            self.tbl_proofs.setItem(
+                row_index, 2, QTableWidgetItem(f"{proof.eligible_merkle_root[:20]}...")
+            )
             self.tbl_proofs.setItem(row_index, 3, QTableWidgetItem(quotas_text))
             self.tbl_proofs.setItem(row_index, 4, QTableWidgetItem(status_text))
 
@@ -1155,11 +1275,19 @@ class CiberSocMainWindow(QMainWindow):
         self.tbl_cyber.setRowCount(len(self.orchestrator.sector_keys))
         for index, sector_key in enumerate(self.orchestrator.sector_keys):
             self.tbl_cyber.setItem(index, 0, QTableWidgetItem(t(sector_key)))
-            self.tbl_cyber.setItem(index, 1, QTableWidgetItem(f"{shares_by_sector[sector_key]:.2f}%"))
-            self.tbl_cyber.setItem(index, 2, QTableWidgetItem(f"{directive.compulsory_final_demand[index]:.2f}"))
-            self.tbl_cyber.setItem(index, 3, QTableWidgetItem(f"{directive.compulsory_gross_output[index]:.2f}"))
+            self.tbl_cyber.setItem(
+                index, 1, QTableWidgetItem(f"{shares_by_sector[sector_key]:.2f}%")
+            )
+            self.tbl_cyber.setItem(
+                index, 2, QTableWidgetItem(f"{directive.compulsory_final_demand[index]:.2f}")
+            )
+            self.tbl_cyber.setItem(
+                index, 3, QTableWidgetItem(f"{directive.compulsory_gross_output[index]:.2f}")
+            )
             self.tbl_cyber.setItem(index, 4, QTableWidgetItem(f"{embedded_labour[index]:.4f} h"))
-            self.tbl_cyber.setItem(index, 5, QTableWidgetItem(f"{self.orchestrator.last_harmonies[index]:+.4f}"))
+            self.tbl_cyber.setItem(
+                index, 5, QTableWidgetItem(f"{self.orchestrator.last_harmonies[index]:+.4f}")
+            )
 
     def _refresh_enterprise_and_mandate_tab(self) -> None:
         t = self.translator.translate
@@ -1178,7 +1306,9 @@ class CiberSocMainWindow(QMainWindow):
             )
         )
         payouts_by_worker = dict(receipt.payouts_by_worker)
-        ordered_workers = sorted(self.orchestrator.enterprise.workers.values(), key=lambda w: w.worker_id)
+        ordered_workers = sorted(
+            self.orchestrator.enterprise.workers.values(), key=lambda w: w.worker_id
+        )
         self.tbl_workers.setRowCount(len(ordered_workers))
         for row_index, worker in enumerate(ordered_workers):
             payout_label = (
@@ -1187,13 +1317,19 @@ class CiberSocMainWindow(QMainWindow):
                 else t("enterprise.state_stipend_cell")
             )
             localized_role = self._resolve_worker_role_label(worker.role_title)
-            self.tbl_workers.setItem(row_index, 0, QTableWidgetItem(f"{worker.worker_id} ({worker.full_name})"))
+            self.tbl_workers.setItem(
+                row_index, 0, QTableWidgetItem(f"{worker.worker_id} ({worker.full_name})")
+            )
             self.tbl_workers.setItem(row_index, 1, QTableWidgetItem(localized_role))
-            self.tbl_workers.setItem(row_index, 2, QTableWidgetItem(t(f"employment.{worker.status.value}")))
+            self.tbl_workers.setItem(
+                row_index, 2, QTableWidgetItem(t(f"employment.{worker.status.value}"))
+            )
             self.tbl_workers.setItem(row_index, 3, QTableWidgetItem(f"$ {worker.monthly_base_pay}"))
             self.tbl_workers.setItem(row_index, 4, QTableWidgetItem(payout_label))
 
-        record = self.orchestrator.protection_manager.get_record(self.orchestrator.tracked_worker_id)
+        record = self.orchestrator.protection_manager.get_record(
+            self.orchestrator.tracked_worker_id
+        )
         if record is None:
             self.lbl_mandate_status.setText(
                 t(
@@ -1234,14 +1370,18 @@ class CiberSocMainWindow(QMainWindow):
         if self.orchestrator.last_scan_results is not None:
             integrity_report, clean_code_report = self.orchestrator.last_scan_results
             lines.append(t("charter.scan_header"))
-            lines.append(t("charter.scan_project_files", count=integrity_report.project_files_scanned))
+            lines.append(
+                t("charter.scan_project_files", count=integrity_report.project_files_scanned)
+            )
             lines.append(
                 t(
                     "charter.scan_locales",
                     locales=", ".join(integrity_report.documentation_locales_verified),
                 )
             )
-            lines.append(t("charter.scan_missing_paths", count=len(integrity_report.missing_required_paths)))
+            lines.append(
+                t("charter.scan_missing_paths", count=len(integrity_report.missing_required_paths))
+            )
             lines.append(t("charter.scan_clean_code", clean=clean_code_report.is_compliant))
             lines.append(t("charter.scan_self_contained", ok=integrity_report.is_self_contained))
             lines.append("")
@@ -1264,15 +1404,40 @@ class CiberSocMainWindow(QMainWindow):
         ]
         self.txt_audit_log.setPlainText("\n".join(rendered_entries))
 
+    def _is_headless_execution(self) -> bool:
+        return QApplication.platformName() == "offscreen"
+
+    def _open_file_in_desktop(self, target_path: Path) -> bool:
+        if self._is_headless_execution():
+            return False
+        return QDesktopServices.openUrl(QUrl.fromLocalFile(str(target_path.resolve())))
+
     def _sync_fullhd_wallpaper_locale(self, active_locale: SupportedLocale) -> Path:
         return export_fullhd_wallpaper(
             self.orchestrator.cibersoc_root / "assets" / "images",
-            application=QGuiApplication.instance(),
             locale=active_locale.value,
         )
 
     def _on_export_fullhd_wallpaper(self) -> None:
         target_path = self._sync_fullhd_wallpaper_locale(self.translator.active_locale)
+        if not self._is_headless_execution():
+            loc_suffix = self.translator.active_locale.value.replace("-", "_")
+            default_target = (
+                Path.home() / "Desktop" / f"cibersoc_freedom_wings_fullhd_{loc_suffix}.png"
+            )
+            chosen_path, _ = QFileDialog.getSaveFileName(
+                self,
+                self.translator.translate("charter.btn_export_fullhd"),
+                str(default_target),
+                "PNG Images (*.png)",
+            )
+            if not chosen_path:
+                return
+            dest = Path(chosen_path)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(target_path.read_bytes())
+            target_path = dest
+        self._open_file_in_desktop(target_path)
         self.orchestrator.record_audit_event(
             "log.fullhd_wallpaper_exported",
             path=str(target_path.resolve()),

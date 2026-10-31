@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cibersoc"
+version = "2.0.0"
+description = "CIBERSOC — Production Architecture for Permanent Cybernetic and Demarchic Socialism"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.12"
+dependencies = [
+    "pyside6>=6.12.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "coverage>=7.17.0",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "pytest-qt>=4.5.0",
+]
+
+[project.scripts]
+cibersoc-ui = "cibersoc.ui.main_window:launch_application"
+cibersoc-sim = "cibersoc.cli:run_cli_entrypoint"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"cibersoc.i18n" = ["catalogues/*.json"]
+"cibersoc.ui" = ["assets/fonts/*", "assets/js/*", "assets/js/controls/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "--cov=src/cibersoc --cov-branch --cov-report=term-missing --cov-fail-under=100"
+
+[tool.coverage.run]
+source = ["src/cibersoc"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
