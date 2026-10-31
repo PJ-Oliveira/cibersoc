@@ -20,6 +20,7 @@ Repository = "https://github.com/PJ-Oliveira/cibersoc.git"
 [project.optional-dependencies]
 dev = [
     "coverage>=7.17.0",
+    "pyright>=1.1.414",
     "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
     "pytest-qt>=4.5.0",
@@ -48,3 +49,8 @@ branch = true
 [tool.coverage.report]
 fail_under = 100
 show_missing = true
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.414",
+]
