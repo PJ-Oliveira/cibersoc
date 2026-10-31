@@ -1,0 +1,15 @@
+{
+  "project": {
+    "files_scanned": 59,
+    "is_self_contained": true,
+    "locales": [
+      "en-GB",
+      "pt",
+      "es"
+    ]
+  },
+  "clean": {
+    "is_compliant": true,
+    "files_scanned": 33
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "cycle": 2,
+  "total_councils": 5,
+  "councils": [
+    {
+      "council_id": "CONS-FED-BRASIL",
+      "tier": "FEDERAL",
+      "name": "council.CONS-FED-BRASIL",
+      "total_seats": 20,
+      "members": [
+        "CID-0085",
+        "CID-0237",
+        "CID-0169",
+        "CID-0297",
+        "CID-0045",
+        "CID-0288",
+        "CID-0268",
+        "CID-0048",
+        "CID-0064",
+        "CID-0208",
+        "CID-0250",
+        "CID-0046",
+        "CID-0186",
+        "CID-0166",
+        "CID-0034",
+        "CID-0259",
+        "CID-0107",
+        "CID-0295",
+        "CID-0067",
+        "CID-0147"
+      ]
+    },
+    {
+      "council_id": "CONS-EST-PARANA",
+      "tier": "STATE",
+      "name": "council.CONS-EST-PARANA",
+      "total_seats": 16,
+      "members": [
+        "CID-0217",
+        "CID-0009",
+        "CID-0213",
+        "CID-0249",
+        "CID-0140",
+        "CID-0116",
+        "CID-0168",
+        "CID-0184",
+        "CID-0070",
+        "CID-0066",
+        "CID-0158",
+        "CID-0058",
+        "CID-0187",
+        "CID-0219",
+        "CID-0239",
+        "CID-0207"
+      ]
+    },
+    {
+      "council_id": "CONS-MUN-CURITIBA",
+      "tier": "MUNICIPAL",
+      "name": "council.CONS-MUN-CURITIBA",
+      "total_seats": 20,
+      "members": [
+        "CID-0057",
+        "CID-0089",
+        "CID-0109",
+        "CID-0121",
+        "CID-0165",
+        "CID-0076",
+        "CID-0068",
+        "CID-0044",
+        "CID-0128",
+        "CID-0188",
+        "CID-0082",
+        "CID-0174",
+        "CID-0010",
+        "CID-0154",
+        "CID-0038",
+        "CID-0087",
+        "CID-0111",
+        "CID-0155",
+        "CID-0099",
+        "CID-0123"
+      ]
+    },
+    {
+      "council_id": "CONS-SET-BOQUEIRAO",
+      "tier": "SECTORAL",
+      "name": "council.CONS-SET-BOQUEIRAO",
+      "total_seats": 10,
+      "members": [
+        "CID-0033",
+        "CID-0069",
+        "CID-0065",
+        "CID-0028",
+        "CID-0004",
+        "CID-0094",
+        "CID-0026",
+        "CID-0063",
+        "CID-0011",
+        "CID-0075"
+      ]
+    },
+    {
+      "council_id": "CONS-SET-MATRIZ",
+      "tier": "SECTORAL",
+      "name": "council.CONS-SET-MATRIZ",
+      "total_seats": 10,
+      "members": [
+        "CID-0125",
+        "CID-0129",
+        "CID-0173",
+        "CID-0200",
+        "CID-0148",
+        "CID-0118",
+        "CID-0146",
+        "CID-0178",
+        "CID-0159",
+        "CID-0171"
+      ]
+    }
+  ]
+}

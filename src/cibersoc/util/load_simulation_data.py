@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from functools import lru_cache
 
-BASE_DATA_ROOT = Path(__file__).parents[2] / "simulation_data"
+BASE_DATA_ROOT = Path(__file__).resolve().parents[3] / "simulation_data"
 
 
 def _checkpoint_path(name: str | None = None) -> Path:

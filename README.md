@@ -5,6 +5,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/PJ-Oliveira/cibersoc/actions/workflows/ci.yml"><img src="https://github.com/PJ-Oliveira/cibersoc/actions/workflows/ci.yml/badge.svg" alt="CI & Standalone Integrity"/></a>
   <a href="#prerequisites--installation"><img src="https://img.shields.io/badge/Python-3.12%20%7C%203.14-blue.svg" alt="Python 3.12+"/></a>
   <a href="#running-the-desktop-ui-pyside6"><img src="https://img.shields.io/badge/UI-PySide6%20Qt%206.12-darkgreen.svg" alt="UI Framework"/></a>
   <a href="#running-the-test-suite-100-coverage"><img src="https://img.shields.io/badge/Coverage-100.00%25-brightgreen.svg" alt="Coverage"/></a>
@@ -142,7 +143,29 @@ The desktop UI provides 6 dedicated workspaces:
 3. **Cybernetic Planning Workspace:** Leontief input-output matrices, macro-allocation plebiscites, Jacobi embedded-labour solver, and capacity harmony relaxation.
 4. **Cooperative Enterprise & Mandate Protection:** 100% equal surplus distribution (no CEO, no private owner), civil stipend parity during mandates, and post-mandate employment stability locks.
 5. **Architectural Charter & Audit Console:** Live Clean Code and project integrity scanner verifying zero mocks, comment-free code, and trilingual documentation completeness.
-6. **README & System Documentation:** Integrated native markdown document reader displaying the full project README and all 4 technical manuals with interactive cross-document hyperlinks, document switcher, and typography zoom.
+6. **Nation Simulation — SEEM Engine:** 3D WebGL/Three.js macroscopic simulation of 1,000,000 citizens across 10 Brazilian regions, tracking HDI color gradients, GINI coefficients, orbital population rings, and real-time emergent event streams.
+
+#### Visual Interface Preview
+
+<p align="center">
+  <b>Nation Simulation — 3D SEEM Engine (Tab 6)</b><br/>
+  <img src="assets/images/screenshots/cibersoc_tab6_nation_simulation_3d.png" alt="CIBERSOC 3D Nation Simulation SEEM Engine" width="95%"/>
+</p>
+
+<p align="center">
+  <b>Federated Mesh Ministries & Council Proportionality (Tab 1)</b><br/>
+  <img src="assets/images/screenshots/cibersoc_tab1_councils_mesh.png" alt="CIBERSOC Federated Mesh Ministries" width="95%"/>
+</p>
+
+<p align="center">
+  <b>Cybernetic Macro-Allocation & Planning Matrix (Tab 3)</b><br/>
+  <img src="assets/images/screenshots/cibersoc_tab3_cybernetic_planning.png" alt="CIBERSOC Cybernetic Planning Matrix" width="95%"/>
+</p>
+
+<p align="center">
+  <b>Architectural Charter & Standalone Integrity Audit (Tab 5)</b><br/>
+  <img src="assets/images/screenshots/cibersoc_tab5_integrity_and_charter.png" alt="CIBERSOC Charter and Integrity Audit" width="95%"/>
+</p>
 
 ### Running the Trilingual CLI Simulator
 ```bash
@@ -212,6 +235,14 @@ The suite enforces:
 
 ---
 
-## 10. License
+## 10. Contributing
+
+We welcome contributions grounded in mathematical and civic rigor. All contributions must preserve CIBERSOC's **Five Architectural Invariants** (100.00% statement and branch coverage, zero mocks, zero production comments/docstrings, trilingual symmetry, and analytical purity).
+
+Please consult [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines, testing instructions, and pull request requirements.
+
+---
+
+## 11. License
 
 CIBERSOC is released under the **Open Civic Architecture Commons Declaration (v2.0)**. See [LICENSE](LICENSE) for details. All source code, mathematical formulations, and documentation are provided freely for civic verification, study, adaptation, and collective deployment.
