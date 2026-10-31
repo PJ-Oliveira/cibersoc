@@ -4,8 +4,9 @@
 
 The **CIBERSOC** simulator runs on **Python 3.12+** (the CI tests use CPython 3.14).  All third‑party packages are declared in `uv.lock` and installed with the ultra‑fast package manager **uv**.  This guarantees a deterministic, reproducible environment on macOS, Linux and Windows.
 
-### 1.1 Create the Isolated Virtual Environment
+### 1.1 Clone and Create the Isolated Virtual Environment
 ```bash
+git clone https://github.com/PJ-Oliveira/cibersoc.git
 cd cibersoc
 uv sync                # creates .venv and installs the exact versions from uv.lock
 ```

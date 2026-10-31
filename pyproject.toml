@@ -13,6 +13,10 @@ dependencies = [
     "pyside6>=6.12.0",
 ]
 
+[project.urls]
+Repository = "https://github.com/PJ-Oliveira/cibersoc.git"
+"Source Code" = "https://github.com/PJ-Oliveira/cibersoc"
+
 [project.optional-dependencies]
 dev = [
     "coverage>=7.17.0",

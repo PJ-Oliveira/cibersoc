@@ -4,8 +4,9 @@
 
 O simulador **CIBERSOC** roda em **Python 3.12+** (os testes CI utilizam CPython 3.14).  Todas as dependências são declaradas em `uv.lock` e instaladas com o gerenciador ultra‑rápido **uv**, garantindo um ambiente determinístico e reproduzível em macOS, Linux e Windows.
 
-### 1.1 Criação do Ambiente Virtual Isolado
+### 1.1 Clonagem e Criação do Ambiente Virtual Isolado
 ```bash
+git clone https://github.com/PJ-Oliveira/cibersoc.git
 cd cibersoc
 uv sync                # cria .venv e instala as versões exatas de uv.lock
 ```
