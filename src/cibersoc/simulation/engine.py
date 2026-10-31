@@ -222,6 +222,14 @@ class NationSimulationEngine:
             "aggregate_gini": latest.aggregate_gini,
             "aggregate_employment": latest.aggregate_employment,
             "event_count": len(latest.events),
+            "events": [
+                {
+                    "category": e.category,
+                    "title": e.title,
+                    "severity": e.severity,
+                }
+                for e in latest.events
+            ],
         }
         return base
 
