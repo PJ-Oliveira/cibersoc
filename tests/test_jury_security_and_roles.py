@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from pathlib import Path
+import sys
 import pytest
 from PySide6.QtGui import QGuiApplication
 
@@ -205,17 +206,21 @@ def test_freedom_wings_icon_and_asset_export(qapp, tmp_path: Path) -> None:
     assert png_path.stat().st_size > 0
     assert svg_path.stat().st_size > 0
 
-    assert apply_macos_dock_icon(png_path) is True
-    assert apply_macos_dock_icon(platform_name="linux") is False
+    if sys.platform == "darwin":
+        assert apply_macos_dock_icon(png_path) is True
+        assert apply_macos_dock_icon(platform_name="linux") is False
 
-    invalid_text_file = tmp_path / "not_an_image.txt"
-    invalid_text_file.write_text("plain text file", encoding="utf-8")
-    assert apply_macos_dock_icon(invalid_text_file) is False
+        invalid_text_file = tmp_path / "not_an_image.txt"
+        invalid_text_file.write_text("plain text file", encoding="utf-8")
+        assert apply_macos_dock_icon(invalid_text_file) is False
 
-    assert apply_macos_dock_icon(appkit_path="/system/nonexistent/appkit.dylib") is False
+        assert apply_macos_dock_icon(appkit_path="/system/nonexistent/appkit.dylib") is False
 
-    missing_asset = tmp_path / "regenerated" / "cibersoc_emblem.png"
-    assert apply_macos_dock_icon(missing_asset) is True
+        missing_asset = tmp_path / "regenerated" / "cibersoc_emblem.png"
+        assert apply_macos_dock_icon(missing_asset) is True
+    else:
+        assert apply_macos_dock_icon(png_path) is False
+        assert apply_macos_dock_icon(platform_name="linux") is False
 
 
 def test_freedom_wings_fullhd_artwork_and_export(tmp_path: Path) -> None:
