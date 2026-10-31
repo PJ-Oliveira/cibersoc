@@ -4,10 +4,12 @@ import re
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QRectF, QSettings, Qt
+from PySide6.QtCore import QRectF, QSettings, QUrl, Qt
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
+    QFileDialog,
     QLabel,
     QPlainTextEdit,
     QPushButton,
@@ -37,8 +39,7 @@ from cibersoc.ui.theme import (
 
 
 def _create_window(qtbot: QtBot, **kwargs: object) -> CiberSocMainWindow:
-    translator = LocalizationCatalog(SupportedLocale.ENGLISH_UK)
-    window = CiberSocMainWindow(translator=translator, **kwargs)
+    window = CiberSocMainWindow(**kwargs)
     qtbot.addWidget(window)
     window.show()
     qtbot.waitExposed(window)
@@ -132,21 +133,32 @@ def test_window_does_not_resize_when_maximised(qtbot: QtBot) -> None:
 
 
 def test_font_size_is_persisted_between_sessions(qtbot: QtBot, tmp_path: Path) -> None:
+    from cibersoc.i18n.translator import SupportedLocale
+    from cibersoc.ui.main_window import LOCALE_SETTINGS_KEY
+
     settings_path = str(tmp_path / "cibersoc_ui.ini")
     first_settings = QSettings(settings_path, QSettings.Format.IniFormat)
     first = _create_window(qtbot, settings=first_settings)
     assert first.font_points == DEFAULT_FONT_POINTS
     first.set_font_points(22)
+    first.translator.switch_locale(SupportedLocale.PORTUGUESE)
     first_settings.sync()
     assert int(first_settings.value(FONT_SETTINGS_KEY)) == 22
+    assert str(first_settings.value(LOCALE_SETTINGS_KEY)) == "pt"
 
     second_settings = QSettings(settings_path, QSettings.Format.IniFormat)
     second = _create_window(qtbot, settings=second_settings)
     assert second.font_points == 22
     assert second.mesh_canvas.font_points == 22
+    assert second.translator.active_locale == SupportedLocale.PORTUGUESE
 
     explicit = _create_window(qtbot, font_points=18, settings=second_settings)
     assert explicit.font_points == 18
+
+    invalid_settings = QSettings(str(tmp_path / "cibersoc_inv.ini"), QSettings.Format.IniFormat)
+    invalid_settings.setValue(LOCALE_SETTINGS_KEY, "invalid_code")
+    inv_win = _create_window(qtbot, settings=invalid_settings)
+    assert inv_win.translator.active_locale == SupportedLocale.ENGLISH_UK
 
 
 @pytest.mark.parametrize("font_points", [MIN_FONT_POINTS, DEFAULT_FONT_POINTS, 20, 26, MAX_FONT_POINTS])
@@ -304,3 +316,71 @@ def test_readme_and_documentation_tab_viewer_and_navigation(qtbot: QtBot) -> Non
     window.cmb_doc_selector.setCurrentIndex(1)
     QApplication.processEvents()
     assert "Fundamentos Teóricos" in window.txt_readme_browser.toPlainText()
+
+
+def test_shortcuts_dialog_and_tab_navigation(qtbot: QtBot) -> None:
+    from PySide6.QtWidgets import QDialog
+
+    window = _create_window(qtbot)
+    orig_exec = QDialog.exec
+    dialog_opened = False
+
+    def fake_exec(self: QDialog) -> int:
+        nonlocal dialog_opened
+        dialog_opened = True
+        return 0
+
+    QDialog.exec = fake_exec
+    try:
+        window._show_shortcuts_dialog()
+        assert dialog_opened is True
+    finally:
+        QDialog.exec = orig_exec
+
+
+def test_open_readme_and_export_fullhd_wallpaper(qtbot: QtBot, tmp_path: Path) -> None:
+    window = _create_window(qtbot)
+    opened_urls: list[str] = []
+    orig_open = QDesktopServices.openUrl
+
+    def fake_open_url(url: QUrl | str, /) -> bool:
+        opened_urls.append(str(url))
+        return True
+
+    setattr(QDesktopServices, "openUrl", fake_open_url)
+    try:
+        window.btn_open_readme.click()
+        assert window.cmb_doc_selector.currentData() == "README.md"
+        assert "CIBERSOC" in window.txt_readme_browser.toPlainText()
+
+        assert window._open_file_in_desktop(tmp_path / "dummy.png") is False
+
+        window._is_headless_execution = lambda: False
+        window._open_file_in_desktop(tmp_path / "dummy.png")
+        assert any("dummy.png" in u for u in opened_urls)
+
+        orig_get_save = QFileDialog.getSaveFileName
+        try:
+            setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *args, **kwargs: ("", "")))
+            initial_count = len(window.orchestrator.audit_events)
+            window._on_export_fullhd_wallpaper()
+            assert len(window.orchestrator.audit_events) == initial_count
+
+            custom_dest = tmp_path / "custom_wallpaper.png"
+            setattr(
+                QFileDialog,
+                "getSaveFileName",
+                staticmethod(lambda *args, **kwargs: (str(custom_dest), "PNG Images (*.png)")),
+            )
+            window._on_export_fullhd_wallpaper()
+            assert custom_dest.is_file()
+            assert custom_dest.stat().st_size > 0
+            last_event = window.orchestrator.audit_events[-1]
+            assert last_event.message_key == "log.fullhd_wallpaper_exported"
+            assert last_event.parameters["path"] == str(custom_dest.resolve())
+        finally:
+            setattr(QFileDialog, "getSaveFileName", orig_get_save)
+    finally:
+        setattr(QDesktopServices, "openUrl", orig_open)
+
+

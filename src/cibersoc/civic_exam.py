@@ -4,7 +4,6 @@ import hashlib
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 
-
 EXAM_SUBJECTS: tuple[str, ...] = (
     "LOGIC",
     "COMPUTING",
@@ -46,7 +45,10 @@ def _scores_pass(scores: tuple[SubjectScore, ...]) -> bool:
 
 
 def _next_due_after_pass(date_taken: date, dob: date) -> date | None:
-    limit = date(dob.year + UPPER_AGE_LIMIT, dob.month, dob.day)
+    try:
+        limit = date(dob.year + UPPER_AGE_LIMIT, dob.month, dob.day)
+    except ValueError:
+        limit = date(dob.year + UPPER_AGE_LIMIT, dob.month, 28)
     try:
         candidate = date(date_taken.year + RENEWAL_YEARS, date_taken.month, date_taken.day)
     except ValueError:
@@ -85,8 +87,15 @@ class CitizenExamRecord:
         last_pass = self.last_passing_attempt()
         if last_pass is None:
             return False
-        age_days = (reference_date - self.date_of_birth).days
-        if age_days >= UPPER_AGE_LIMIT * 365:
+        exact_age = (
+            reference_date.year
+            - self.date_of_birth.year
+            - (
+                (reference_date.month, reference_date.day)
+                < (self.date_of_birth.month, self.date_of_birth.day)
+            )
+        )
+        if exact_age >= UPPER_AGE_LIMIT:
             return True
         due = _next_due_after_pass(last_pass.date_taken, self.date_of_birth)
         if due is None:
@@ -120,7 +129,5 @@ class CivicExamScheduler:
         record.attempts.append(attempt)
         return attempt
 
-    def is_eligible_for_sortition(
-        self, record: CitizenExamRecord, reference_date: date
-    ) -> bool:
+    def is_eligible_for_sortition(self, record: CitizenExamRecord, reference_date: date) -> bool:
         return record.is_compliant(reference_date)
