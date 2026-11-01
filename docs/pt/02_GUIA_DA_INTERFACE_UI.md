@@ -47,16 +47,16 @@ Controles persistentes no topo da janela principal:
 - **Resumo Operacional (`lbl_sortition_summary`):** Exibe ciclo ativo, cadastro local (`320`), conselheiros em exercício (`76` nos 5 conselhos), ex-conselheiros em quarentena e reincidência consecutiva (`0` invariante).
 - **Ações de Sorteio e Snapshot:** Executa o próximo ciclo `Commit-Reveal SHA-256` (`btn_next_cycle`), testa o bloqueio constitucional de candidatura partidária (`btn_block_election` -> `ElectoralOperationForbiddenError`) ou salva um snapshot determinístico (`btn_save_checkpoint`) em `simulation_data/checkpoints/`.
 - **Agendador de Exames de Habilitação Cívica (`grp_civic_enablement`):** Monitora a qualificação periódica nas 4 disciplinas essenciais (`btn_civic_round`), aplicando isenção estatutária automática a partir dos 60 anos e habilitação para auditoria técnica (`>= 70%`).
-- **Tabela de Provas Criptográficas (`tbl_proofs`):** Exibe raiz de Merkle SHA-256, cotas de Hamilton por estrato e selo `VERIFICADA (SHA-256)`.
+- **Tabela de Provas Criptográficas (`tbl_proofs`):** Exibe raiz de Merkle SHA-256 (impressão digital imutável do cadastro elegível), cotas inteiras de Hamilton por estrato e selo `VERIFICADA (SHA-256)`.
 
 ### 3.3 Macro-Alocação Cibernética (`tabs.cybernetics`)
-- **Controles de Cédulas (`spn_votes_edu`, `spn_votes_health`) e Apuração (`btn_run_plebiscite`):** Executa plebiscito anônimo resistente à coação, deriva a demanda final física a partir das cotas exatas de trabalho incorporado ($s_j = 100 \cdot H_j y_j^* / \sum_k H_k y_k^*$), resolve produção bruta CSR de Leontief, aplica Harmonia de curto prazo de Cockshott e difunde a diretriz vinculante.
-- **Ajuste Iterativo do Plano e Fronteira Ecológica de Carbono (`grp_cyber_feedback`):** Simula feedback de razão de escoamento (`spn_clearing_ratio`) e respeito ao teto físico de carbono (`spn_carbon_budget`, `btn_iterate_plan`).
+- **Controles de Cédulas (`spn_votes_edu`, `spn_votes_health`) e Apuração (`btn_run_plebiscite`):** Executa plebiscito anônimo resistente à coação, deriva a demanda final física a partir das cotas exatas de trabalho incorporado ($s_j = 100 \cdot H_j y_j^* / \sum_k H_k y_k^*$), resolve produção bruta CSR de Leontief (`rho(A) < 1,0` = economia produtiva sem espiral infinita de insumos), aplica Harmonia de curto prazo de Cockshott e difunde a diretriz vinculante.
+- **Ajuste Iterativo do Plano e Fronteira Ecológica de Carbono (`grp_cyber_feedback`):** Simula feedback da razão demanda/trabalho `p/v` (`spn_clearing_ratio`: `> 1` indica falta/fila -> expande meta; `< 1` indica sobra -> reduz meta) e respeito ao teto físico de carbono (`spn_carbon_budget`, `btn_iterate_plan`, escalonamento `lambda*`).
 - **Salvaguardas Constitucionais:** Bloqueia nomes de candidatos na cédula (`btn_block_person_pleb`) e desvios orçamentários de conselhos (`btn_block_council_override`).
-- **Tabela da Matriz Insumo-Produto (`tbl_cyber`):** Exibe cota de trabalho votada (`%`), demanda final $y^*$, produção bruta $x$, trabalho incorporado de Jacobi $H$ e índice de Harmonia por setor.
+- **Tabela da Matriz Insumo-Produto (`tbl_cyber`):** Exibe cota de trabalho votada (`%`), demanda final $y^*$ (bens líquidos entregues à sociedade), produção bruta $x$ (total produzido incluindo insumos intermediários), trabalho incorporado de Jacobi $H$ (horas diretas + indiretas por unidade) e índice de Harmonia por setor.
 
 ### 3.4 Empresa Sem CEO e Retorno Civil (`tabs.enterprise`)
-- **Painel Esquerdo — Livro-Razão da Empresa Cooperativa (`grp_enterprise_ledger`):** Ajusta a Receita Operacional do Período (`spn_revenue`) e calcula cotas racionais exatas $1/N$ em dias inteiros (`btn_distribute_profit`) via `Decimal` e `math.gcd`, mantendo retenção corporativa identicamente em `$0.00`. Tentar nomear um CEO (`btn_block_ceo`) dispara `OrganisationalViolationError`.
+- **Painel Esquerdo — Livro-Razão da Empresa Cooperativa (`grp_enterprise_ledger`):** Exibe a máscara de usufruto coletivo `1,0,0,0` (`Uso=Sim`, `Venda/Compra/Herança=Não`), ajusta a Receita Operacional do Período (`spn_revenue`) e calcula cotas racionais exatas $1/N$ em dias inteiros (`btn_distribute_profit`) via `Decimal` e `math.gcd`, mantendo retenção corporativa identicamente em `$0.00`. Tentar nomear um CEO (`btn_block_ceo`) dispara `OrganisationalViolationError`.
 - **Painel Direito — Ciclo de Mandato do Cidadão Sorteado (`grp_mandate_lifecycle`):** Conduz `CID-0001` por (1) Suspensão por Mandato, (2) Reajuste de Subsídio pelo IPCA (`+0,50%`), (3) Reintegração Protegida ($\ge 180$ dias) e (4) Bloqueio de Demissão Pós-Retorno (`EmploymentStabilityLockError`).
 
 ### 3.5 Axiomas, Integridade e Documentação (`tabs.charter_docs`)
@@ -65,7 +65,7 @@ Controles persistentes no topo da janela principal:
 
 ### 3.6 Simulação Nacional — Motor 3D SEEM (`tabs.simulation`)
 - **Escala Nacional e Topologia Continental:** Simula **150.700.000 habitantes** distribuídos em 10 polos macrorregionais brasileiros sobre silhueta vetorial continental com arcos 3D Bézier de comércio insumo-produto inter-regional, torres de IDH, anéis populacionais e conselheiros regionais com quarentena pós-mandato (`70` ativos/ano em 7 pastas × 10 polos).
-- **Comparador de Regimes Institucionais (`cmb_regime`):** Avalia três regimes sob **Números Aleatórios Comuns (CRN)** (mesma sequência de choques exógenos): **(A) CIBERSOC (Demarquia + Cibernética + 1/N)**, **(B) Oligarquia Eleitoral (Mercado + Partidos)** e **(C) Centralismo Burocrático (Estado Comandista)**, exibindo deltas comparativos em tempo real (`ΔIDH`, `ΔGini`) e exportando trajetórias CSV/JSON.
+- **Placar Comparativo Ao Vivo dos 3 Regimes (`cmb_regime` + HUD):** Avalia simultaneamente três sistemas sob **Números Aleatórios Comuns (CRN)** (exatamente os mesmos choques climáticos e econômicos anuais): **(A) CIBERSOC (Sorteio + 1/N + Plebiscito)**, **(C) Burocracia Estatal (Comando Top-Down)** e **(B) Capitalismo Eleitoral (Partidos + CEOs)**, exibindo lado a lado o **IDH e o GINI reais dos 3 regimes** tanto no HUD 3D quanto na barra superior de status, além de exportar trajetórias CSV/JSON.
 
 ---
 

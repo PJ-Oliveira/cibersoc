@@ -18,7 +18,7 @@ flowchart TD
     Directive --> Mesh
     Ent["SocialistEnterprise (Bitmask 8, Zero CEOs)"] --> GCD["Partilha Racional 1/N por MDC em Dias Inteiros"]
     Mandate["MandateProtectionManager (Paridade IPCA e Trava >=180 Dias)"] <--> Ent
-    SEEM["NationalSimulationEngine (150,7M Cidadãos, Regimes CRN A/B/C)"] <--> Mesh
+    SEEM["NationSimulationEngine (150,7M Cidadãos, Regimes CRN A/B/C)"] <--> Mesh
 ```
 
 ---
@@ -70,7 +70,7 @@ flowchart TD
 ## 6. Motor Contrafactual SEEM por Números Aleatórios Comuns ([`simulation/engine.py`](../../src/cibersoc/simulation/engine.py))
 
 - **150,7 Milhões de Cidadãos e Corredores Inter-Regionais:** Modela 10 polos macrorregionais brasileiros conectados por fluxos insumo-produto (`INTER_REGIONAL_CORRIDORS`), sorteio criptográfico `CounterModeHmacDrbg` de conselheiros regionais (`CouncillorSlot`) com quarentena pós-mandato e mitigação setorial de choques (`PORTFOLIO_EVENT_CATEGORIES`).
-- **Regimes Institucionais sob CRN:** `NationalSimulationEngine` evolui **(A) `CIBERSOC_DEMARCHY`**, **(B) `ELECTORAL_OLIGARCHY`** e **(C) `BUREAUCRATIC_CENTRALISM`** sob a mesma sequência de choques exógenos (`compare_regimes()`), isolando diferenças estruturais em IDH, convergência do índice de Gini e resiliência do emprego.
+- **Regimes Institucionais sob CRN (`_apply_institutional_governance`):** `NationSimulationEngine` evolui **(A) `CIBERSOC_DEMARCHY`**, **(B) `ELECTORAL_OLIGARCHY`** e **(C) `BUREAUCRATIC_CENTRALISM`** sob a mesma sequência de choques exógenos (`compare_regimes()`). Cada ciclo aplica convergência assintótica parametrizada (`convergence_rate`), transferência inter-regional (`equalisation_transfer`: `+0.032` em A, `+0.014` em C, `-0.005` polarização em B), ossificação burocrática pós-Ano 8 (`ossification_rate = 0.0018` em C), atrito climático recorrente nos biomas tropicais ($\text{lat} > -16^\circ$ sob `ECOLOGICAL_STRESS`), aceleração reconstrutiva (`1.25×` sob `POST_CRISIS_EQUALISATION`) e margem côncava de fronteira (`max(0, 0.965 - hdi)`) para diretrizes plebiscitárias.
 
 ---
 

@@ -52,6 +52,9 @@ VIEWER_TEXT_KEYS: tuple[str, ...] = (
     "hud_cycle",
     "hud_year",
     "hud_regime",
+    "hud_reg_dem",
+    "hud_reg_oli",
+    "hud_reg_cen",
     "hud_population",
     "hud_citizens",
     "hud_metrics",
@@ -59,8 +62,10 @@ VIEWER_TEXT_KEYS: tuple[str, ...] = (
     "hud_gini",
     "hud_employment",
     "hud_comparison",
+    "hud_comparison_tip",
     "hud_hint",
     "hud_history",
+    "hud_history_key",
     "legend_title",
     "legend_towers_title",
     "legend_towers_text",
@@ -73,6 +78,7 @@ VIEWER_TEXT_KEYS: tuple[str, ...] = (
     "legend_particles_title",
     "legend_particles_text",
     "glossary_title",
+    "gl_comparison",
     "gl_population",
     "gl_citizens",
     "gl_hdi",
@@ -84,8 +90,6 @@ VIEWER_TEXT_KEYS: tuple[str, ...] = (
     "inspector_workforce",
     "inspector_events",
     "inspector_no_events",
-    "ev_title",
-    "ev_idle",
     "label_hdi",
     "label_gini",
     "label_pop",
@@ -109,30 +113,38 @@ body > canvas { display: block; position: absolute; top: 0; left: 0; }
 
 #hud {
   position: absolute; top: 10px; left: 12px; z-index: 10;
-  background: rgba(22,17,14,0.92); border: 1px solid #3a2e24;
-  padding: 7px 11px; border-radius: 4px;
-  width: clamp(170px, 21vw, 250px);
+  background: rgba(22,17,14,0.94); border: 1px solid #4A3930;
+  padding: 6px 10px; border-radius: 4px;
+  width: clamp(215px, 26vw, 315px);
 }
-#hud .section { font-size: clamp(7px,0.8vw,9px); color: #7a6a5a;
-                letter-spacing: 1px; margin-bottom: 3px; margin-top: 5px; }
+#hud .section { font-size: clamp(7px,0.75vw,8.5px); color: #9a8a7a;
+                letter-spacing: 0.9px; margin-bottom: 2px; margin-top: 5px; }
 #hud .section:first-child { margin-top: 0; }
-#hud .row { font-size: clamp(8px,0.92vw,11px); color: #C89B6D;
-            margin-bottom: 2px; display: flex;
+#hud .score-hdr { border-top: 1px dashed #3a2e24; padding-top: 4px; cursor: help; color: #C89B6D; }
+#hud .row { font-size: clamp(8px,0.88vw,10.5px); color: #C89B6D;
+            margin-bottom: 1px; display: flex;
             justify-content: space-between; gap: 8px; }
-#hud .val  { color: #F4EAD8; font-weight: bold; }
-#hud .hint { font-size: clamp(7px,0.8vw,9px); color: #7a6a5a;
-             margin-top: 4px; font-style: italic; }
+#hud .score-row { padding: 1px 4px; border-radius: 2px; border-left: 2px solid transparent; }
+#hud .score-row.active-reg { background: rgba(200,155,109,0.14); border-left-color: #F4EAD8; }
+#hud .score-row.dem-row { color: #84A97C; }
+#hud .score-row.dem-row .val { color: #9EC996; }
+#hud .score-row.cen-row { color: #C89B6D; }
+#hud .score-row.oli-row { color: #C26653; }
+#hud .score-row.oli-row .val { color: #D98270; }
+#hud .val  { color: #F4EAD8; font-weight: bold; white-space: nowrap; }
+#hud .comp-note { font-size: clamp(7px,0.72vw,9px); color: #9a8a7a;
+                  line-height: 1.2; margin: 1px 0 2px 0; }
 #history-chart {
-  display: block; width: 100%; height: 42px;
-  margin-top: 4px; border: 1px solid #3a2e24;
+  display: block; width: 100%; height: 34px;
+  margin-top: 2px; border: 1px solid #3a2e24;
   border-radius: 2px; background: #120d0a;
 }
 
 #inspector {
-  position: absolute; top: 12px; right: 54px; z-index: 12;
+  position: absolute; top: 46px; right: 54px; z-index: 12;
   background: rgba(22,17,14,0.95); border: 1px solid #C89B6D;
   padding: 10px 14px; border-radius: 4px;
-  width: clamp(200px, 24vw, 320px); max-height: 280px; overflow-y: auto;
+  width: clamp(210px, 26vw, 340px); max-height: calc(100vh - 60px); overflow-y: auto;
   box-shadow: 0 4px 12px rgba(0,0,0,0.6);
 }
 #inspector .ins-hdr { display: flex; justify-content: space-between; align-items: center;
@@ -149,10 +161,10 @@ body > canvas { display: block; position: absolute; top: 0; left: 0; }
 #inspector .ins-ev-line { font-size: clamp(7px,0.8vw,10px); color: #84A97C; line-height: 1.3; margin-bottom: 2px; }
 
 #legend {
-  position: absolute; bottom: 44px; left: 12px; z-index: 10;
-  background: rgba(22,17,14,0.92); border: 1px solid #3a2e24;
-  padding: 8px 12px; border-radius: 4px;
-  width: clamp(220px, 28vw, 350px); max-height: max(120px, calc(100vh - 290px));
+  position: absolute; top: 10px; right: 54px; z-index: 11;
+  background: rgba(22,17,14,0.94); border: 1px solid #6E523E;
+  padding: 7px 12px; border-radius: 4px;
+  width: clamp(220px, 27vw, 355px); max-height: calc(100vh - 54px);
   overflow-y: auto; scrollbar-width: thin; scrollbar-color: #5C4335 #16110E;
 }
 #legend .leg-hdr { display: flex; justify-content: space-between; cursor: pointer;
@@ -180,17 +192,6 @@ body > canvas { display: block; position: absolute; top: 0; left: 0; }
 #legend .gl-item { font-size: clamp(7px,0.85vw,11px); line-height: 1.4;
                    color: #9a8a7a; margin-bottom: 5px; }
 #legend .gl-item b { color: #C89B6D; }
-
-#events {
-  position: absolute; bottom: 44px; right: 52px; z-index: 10;
-  background: rgba(22,17,14,0.90); border: 1px solid #3a2e24;
-  padding: 8px 12px; border-radius: 4px;
-  width: clamp(180px,28vw,370px); max-height: 150px; overflow: hidden;
-}
-#events .ev-hdr { font-size: clamp(7px,0.85vw,10px); color: #C89B6D;
-                  letter-spacing: 1px; margin-bottom: 5px; }
-#events .ev-line { font-size: clamp(7px,0.85vw,11px); color: #84A97C;
-                   margin-bottom: 3px; line-height: 1.4; }
 
 #title {
   position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
@@ -236,10 +237,13 @@ body > canvas { display: block; position: absolute; top: 0; left: 0; }
   <div class="row"><span data-i18n="hud_hdi"></span><span class="val" id="v-hdi">—</span></div>
   <div class="row"><span data-i18n="hud_gini"></span><span class="val" id="v-gini">—</span></div>
   <div class="row"><span data-i18n="hud_employment"></span><span class="val" id="v-emp">—</span></div>
-  <div class="row"><span data-i18n="hud_comparison"></span><span class="val" id="v-comp">—</span></div>
-  <div class="hint" id="v-hint" data-i18n="hud_hint"></div>
+  <div class="section score-hdr" data-i18n-title="hud_comparison_tip" data-i18n="hud_comparison"></div>
+  <div class="row score-row dem-row" id="sr-dem"><span data-i18n="hud_reg_dem"></span><span class="val" id="v-sc-dem">—</span></div>
+  <div class="row score-row cen-row" id="sr-cen"><span data-i18n="hud_reg_cen"></span><span class="val" id="v-sc-cen">—</span></div>
+  <div class="row score-row oli-row" id="sr-oli"><span data-i18n="hud_reg_oli"></span><span class="val" id="v-sc-oli">—</span></div>
   <div class="section" data-i18n="hud_history"></div>
-  <canvas id="history-chart" width="240" height="50"></canvas>
+  <div class="comp-note" data-i18n="hud_history_key"></div>
+  <canvas id="history-chart" width="256" height="38"></canvas>
 </div>
 <div id="inspector" style="display:none;">
   <div class="ins-hdr"><span id="ins-name">—</span><button id="ins-close" title="Close">&times;</button></div>
@@ -276,6 +280,7 @@ body > canvas { display: block; position: absolute; top: 0; left: 0; }
     </div>
     <div class="gloss">
       <div class="gloss-hdr" data-i18n="glossary_title"></div>
+      <div class="gl-item" data-i18n-term="gl_comparison"></div>
       <div class="gl-item" data-i18n-term="gl_population"></div>
       <div class="gl-item" data-i18n-term="gl_citizens"></div>
       <div class="gl-item" data-i18n-term="gl_hdi"></div>
@@ -283,10 +288,6 @@ body > canvas { display: block; position: absolute; top: 0; left: 0; }
       <div class="gl-item" data-i18n-term="gl_employment"></div>
     </div>
   </div>
-</div>
-<div id="events">
-  <div class="ev-hdr" data-i18n="ev_title"></div>
-  <div id="ev-body"><div class="ev-line" style="color:#7a6a5a" data-i18n="ev_idle"></div></div>
 </div>
 <div id="ctrl-hint" data-i18n="ctrl_hint"></div>
 <script>
@@ -341,6 +342,7 @@ window.applyI18n = function(map) {
   window.__i18n = map;
   document.documentElement.lang = numLocale();
   document.querySelectorAll('[data-i18n]').forEach(e => { e.textContent = T(e.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-title]').forEach(e => { e.title = T(e.dataset.i18nTitle); });
   document.querySelectorAll('[data-i18n-term]').forEach(e => {
     const text = T(e.dataset.i18nTerm);
     const cut = text.indexOf(':') + 1;
@@ -354,27 +356,39 @@ window.applyI18n = function(map) {
 window.updateHud = function(data) {
   setText('v-year', String(data.year));
   const regMap = {
-    'CIBERSOC_DEMARCHY': 'A · DEM',
-    'ELECTORAL_OLIGARCHY': 'B · OLI',
-    'BUREAUCRATIC_CENTRALISM': 'C · CEN'
+    'CIBERSOC_DEMARCHY': T('hud_reg_dem') || 'A · Sortition + 1/N',
+    'ELECTORAL_OLIGARCHY': T('hud_reg_oli') || 'B · Elections + CEOs',
+    'BUREAUCRATIC_CENTRALISM': T('hud_reg_cen') || 'C · State Bureaucracy'
   };
-  setText('v-regime', regMap[data.regime] || 'A · DEM');
+  setText('v-regime', regMap[data.regime] || regMap['CIBERSOC_DEMARCHY']);
   setText('v-pop', fmtInt(data.population_size));
   setText('v-drawn', fmtInt(data.citizens_drawn));
+  const rowIds = {
+    'CIBERSOC_DEMARCHY': 'sr-dem',
+    'BUREAUCRATIC_CENTRALISM': 'sr-cen',
+    'ELECTORAL_OLIGARCHY': 'sr-oli'
+  };
+  Object.entries(rowIds).forEach(([k, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active-reg', data.regime === k);
+  });
   const hasCycle = !!data.latest_cycle;
-  const hint = document.getElementById('v-hint');
-  if (hint) hint.style.display = hasCycle ? 'none' : '';
-  const body = document.getElementById('ev-body');
   if (hasCycle) {
     const c = data.latest_cycle;
     setText('v-hdi', fmtDec(c.aggregate_hdi, 3));
     setText('v-gini', fmtDec(c.aggregate_gini, 3));
     setText('v-emp', fmtDec(c.aggregate_employment * 100, 1) + '%');
-    if (data.regime_comparison && data.regime_comparison.CIBERSOC_DEMARCHY && data.regime_comparison.ELECTORAL_OLIGARCHY) {
-      const dh = data.regime_comparison.CIBERSOC_DEMARCHY.aggregate_hdi - data.regime_comparison.ELECTORAL_OLIGARCHY.aggregate_hdi;
-      setText('v-comp', (dh >= 0 ? '+' : '') + fmtDec(dh, 3) + ' HDI');
-    } else {
-      setText('v-comp', '—');
+    if (data.regime_comparison) {
+      const rc = data.regime_comparison;
+      if (rc.CIBERSOC_DEMARCHY) {
+        setText('v-sc-dem', fmtDec(rc.CIBERSOC_DEMARCHY.aggregate_hdi, 3) + ' · ' + fmtDec(rc.CIBERSOC_DEMARCHY.aggregate_gini, 3));
+      }
+      if (rc.BUREAUCRATIC_CENTRALISM) {
+        setText('v-sc-cen', fmtDec(rc.BUREAUCRATIC_CENTRALISM.aggregate_hdi, 3) + ' · ' + fmtDec(rc.BUREAUCRATIC_CENTRALISM.aggregate_gini, 3));
+      }
+      if (rc.ELECTORAL_OLIGARCHY) {
+        setText('v-sc-oli', fmtDec(rc.ELECTORAL_OLIGARCHY.aggregate_hdi, 3) + ' · ' + fmtDec(rc.ELECTORAL_OLIGARCHY.aggregate_gini, 3));
+      }
     }
     historySnapshots.push({
       year: data.year,
@@ -382,23 +396,14 @@ window.updateHud = function(data) {
       gini: c.aggregate_gini,
       emp: c.aggregate_employment
     });
-    body.replaceChildren(...c.events.map(e => {
-      const line = document.createElement('div');
-      line.className = 'ev-line';
-      line.textContent = '[' + e.category + '] ' + e.title;
-      return line;
-    }));
   } else {
     setText('v-hdi', '—');
     setText('v-gini', '—');
     setText('v-emp', '—');
-    setText('v-comp', '—');
+    setText('v-sc-dem', '—');
+    setText('v-sc-cen', '—');
+    setText('v-sc-oli', '—');
     historySnapshots.length = 0;
-    const idle = document.createElement('div');
-    idle.className = 'ev-line';
-    idle.style.color = '#7a6a5a';
-    idle.textContent = T('ev_idle');
-    body.replaceChildren(idle);
   }
   drawHistoryChart();
 };
@@ -763,6 +768,11 @@ function showInspector(regId) {
     div.textContent = T('inspector_no_events');
     evContainer.replaceChildren(div);
   }
+  const legBox = document.getElementById('legend');
+  if (legBox && !legBox.classList.contains('collapsed')) {
+    legBox.classList.add('collapsed');
+    setText('leg-caret', '\u25b8');
+  }
   p.style.display = 'block';
 }
 
@@ -838,13 +848,6 @@ animate();
 </script>
 </body>
 </html>"""
-
-
-def _format_signed_locale(formatter: QLocale, value: float, decimals: int) -> str:
-    formatted = formatter.toString(value, "f", decimals)
-    if value >= 0.0:
-        return f"+{formatted}"
-    return formatted
 
 
 def _load_default_webengine_cls(
@@ -1159,17 +1162,15 @@ class SimulationTab(QWidget):
             )
             comp = engine.compare_regimes()
             dem = comp[InstitutionalRegime.CIBERSOC_DEMARCHY.value]
+            cen = comp[InstitutionalRegime.BUREAUCRATIC_CENTRALISM.value]
             oli = comp[InstitutionalRegime.ELECTORAL_OLIGARCHY.value]
-            dhdi_val = dem["aggregate_hdi"] - oli["aggregate_hdi"]
-            dgini_val = dem["aggregate_gini"] - oli["aggregate_gini"]
-            demp_val = (dem["aggregate_employment"] - oli["aggregate_employment"]) * 100.0
-            dhdi_str = _format_signed_locale(formatter, dhdi_val, 3)
-            dgini_str = _format_signed_locale(formatter, dgini_val, 3)
-            demp_str = _format_signed_locale(formatter, demp_val, 1)
             comp_line = self._status_texts["status_comparison"].format(
-                dhdi=dhdi_str,
-                dgini=dgini_str,
-                demp=demp_str,
+                dem_hdi=formatter.toString(dem["aggregate_hdi"], "f", 3),
+                dem_gini=formatter.toString(dem["aggregate_gini"], "f", 3),
+                cen_hdi=formatter.toString(cen["aggregate_hdi"], "f", 3),
+                cen_gini=formatter.toString(cen["aggregate_gini"], "f", 3),
+                oli_hdi=formatter.toString(oli["aggregate_hdi"], "f", 3),
+                oli_gini=formatter.toString(oli["aggregate_gini"], "f", 3),
             )
             self.lbl_status_metrics.setText(f"{metrics_line}\n{comp_line}")
         else:

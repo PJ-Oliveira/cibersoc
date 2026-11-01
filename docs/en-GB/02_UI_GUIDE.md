@@ -47,16 +47,16 @@ Persistent controls at the top of the main window:
 - **Control Summary (`lbl_sortition_summary`):** Displays active cycle, registered local pool (`320`), serving councillors (`76` across 5 councils), quarantined outgoing councillors, and consecutive re-selection (`0` invariant).
 - **Sortition & Snapshot Actions:** Execute the next `Commit-Reveal SHA-256` sortition cycle (`btn_next_cycle`), test the party-candidacy constitutional block (`btn_block_election` -> `ElectoralOperationForbiddenError`), or persist a deterministic snapshot (`btn_save_checkpoint`) under `simulation_data/checkpoints/`.
 - **Civic Enablement Exam Scheduler (`grp_civic_enablement`):** Tracks periodic civic qualification across 4 core subjects (`btn_civic_round`), enforcing automatic statutory exemption from age 60 while tracking technical-audit eligibility (`>= 70%`).
-- **Cryptographic Proofs Table (`tbl_proofs`):** Displays each council's SHA-256 Merkle root, Hamilton stratum breakdown, and `VERIFIED (SHA-256)` audit status.
+- **Cryptographic Proofs Table (`tbl_proofs`):** Displays each council's SHA-256 Merkle root (tamper-proof fingerprint of the eligible citizen roll), integer Hamilton stratum quotas, and `VERIFIED (SHA-256)` audit status.
 
 ### 3.3 Cybernetic Macro-Allocation (`tabs.cybernetics`)
-- **Ballot Controls (`spn_votes_edu`, `spn_votes_health`) & Tally (`btn_run_plebiscite`):** Executes a coercion-resistant blinded plebiscite, derives physical final demand from exact embedded labour shares ($s_j = 100 \cdot H_j y_j^* / \sum_k H_k y_k^*$), solves CSR Leontief gross output, applies Cockshott short-run Harmony relaxation, and broadcasts the binding directive.
-- **Iterative Plan Adjustment & Ecological Carbon Boundary (`grp_cyber_feedback`):** Simulates real-time clearing-ratio feedback (`spn_clearing_ratio`) and physical carbon-ceiling enforcement (`spn_carbon_budget`, `btn_iterate_plan`).
+- **Ballot Controls (`spn_votes_edu`, `spn_votes_health`) & Tally (`btn_run_plebiscite`):** Executes a coercion-resistant blinded plebiscite, derives physical final demand from exact embedded labour shares ($s_j = 100 \cdot H_j y_j^* / \sum_k H_k y_k^*$), solves CSR Leontief gross output (`rho(A) < 1.0` = net-productive economy without infinite input loops), applies Cockshott short-run Harmony relaxation, and broadcasts the binding directive.
+- **Iterative Plan Adjustment & Ecological Carbon Boundary (`grp_cyber_feedback`):** Simulates real-time demand/labour `p/v` ratio feedback (`spn_clearing_ratio`: `> 1` shortage -> expand output; `< 1` surplus -> scale back) and physical carbon-ceiling enforcement (`spn_carbon_budget`, `btn_iterate_plan`, `lambda*` scaling).
 - **Constitutional Safeguards:** Blocks personal candidate names on ballots (`btn_block_person_pleb`) and unauthorized council budget deviations (`btn_block_council_override`).
-- **Input–Output Matrix Table (`tbl_cyber`):** Displays voted labour share (`%`), final demand $y^*$, gross output $x$, Jacobi embedded labour $H$, and short-run Harmony per sector.
+- **Input–Output Matrix Table (`tbl_cyber`):** Displays voted labour share (`%`), final demand $y^*$ (net goods delivered to citizens), gross output $x$ (total output including intermediate inputs), Jacobi embedded labour $H$ (direct + indirect work hours per unit), and short-run Harmony per sector.
 
 ### 3.4 CEO-Free Enterprise & Civil Return (`tabs.enterprise`)
-- **Left Panel — Cooperative Enterprise Ledger (`grp_enterprise_ledger`):** Adjusts Period Operating Revenue (`spn_revenue`) and computes exact integer-day rational $1/N$ worker shares (`btn_distribute_profit`) via `Decimal` and `math.gcd`, keeping corporate retained profit identically at `$0.00`. Attempting to appoint a CEO (`btn_block_ceo`) raises `OrganisationalViolationError`.
+- **Left Panel — Cooperative Enterprise Ledger (`grp_enterprise_ledger`):** Displays the collective usufruct bitmask `1,0,0,0` (`Use=Yes`, `Sell/Buy/Inherit=No`), adjusts Period Operating Revenue (`spn_revenue`), and computes exact integer-day rational $1/N$ worker shares (`btn_distribute_profit`) via `Decimal` and `math.gcd`, keeping corporate retained profit identically at `$0.00`. Attempting to appoint a CEO (`btn_block_ceo`) raises `OrganisationalViolationError`.
 - **Right Panel — Sorted Citizen Mandate Lifecycle (`grp_mandate_lifecycle`):** Guides worker `CID-0001` through (1) Mandate Suspension, (2) `+0.50%` CPI Stipend Indexing, (3) Protected Reinstatement ($\ge 180$ days), and (4) Post-Return Dismissal Block (`EmploymentStabilityLockError`).
 
 ### 3.5 Axioms, Integrity & Documentation (`tabs.charter_docs`)
@@ -65,7 +65,7 @@ Persistent controls at the top of the main window:
 
 ### 3.6 Nation Simulation — 3D SEEM Engine (`tabs.simulation`)
 - **National Scale & Continental Topology:** Simulates **150,700,000 inhabitants** across 10 Brazilian macro-regional poles over an authentic continental vector silhouette with 3D quadratic-Bézier inter-regional input–output trade arcs, HDI towers, population ground rings, and rotating 1-cycle quarantined regional councillors (`70` active per year across 7 portfolios × 10 poles).
-- **Institutional Regime Comparator (`cmb_regime`):** Evaluates three regimes side-by-side under **Common Random Numbers (CRN)** (identical shock streams): **(A) CIBERSOC (Demarchy + Cybernetics + 1/N)**, **(B) Electoral Oligarchy (Market + Parties)**, and **(C) Bureaucratic Centralism (Command State)**, displaying real-time comparative HDI and Gini deltas (`ΔHDI`, `ΔGini`) and exporting multi-regime CSV/JSON trajectories.
+- **Live 3-Regime Side-by-Side Scoreboard (`cmb_regime` + HUD):** Evaluates three institutional systems simultaneously under **Common Random Numbers (CRN)** (identical yearly climate and economic shocks): **(A) CIBERSOC (Sortition + 1/N + Plebiscite)**, **(C) State Bureaucracy (Top-Down Command)**, and **(B) Electoral Capitalism (Parties + CEOs)**, displaying all **3 regimes' real-time HDI and GINI side-by-side** in both the 3D HUD and the top status strip, alongside multi-regime CSV/JSON export.
 
 ---
 

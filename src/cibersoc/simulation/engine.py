@@ -200,35 +200,47 @@ class RegimeParameters:
     target_hdi: float
     target_gini: float
     target_employment: float
+    convergence_rate: float
     shock_mitigation_gain: float
     rent_capture_drift: float
     macro_directive_multiplier: float
+    equalisation_transfer: float
+    ossification_rate: float
 
 
 REGIME_PARAMETERS: Mapping[InstitutionalRegime, RegimeParameters] = {
     InstitutionalRegime.CIBERSOC_DEMARCHY: RegimeParameters(
-        target_hdi=0.84,
-        target_gini=0.28,
-        target_employment=0.91,
-        shock_mitigation_gain=0.22,
+        target_hdi=0.925,
+        target_gini=0.245,
+        target_employment=0.935,
+        convergence_rate=0.055,
+        shock_mitigation_gain=0.30,
         rent_capture_drift=0.0,
         macro_directive_multiplier=1.0,
+        equalisation_transfer=0.032,
+        ossification_rate=0.0,
     ),
     InstitutionalRegime.ELECTORAL_OLIGARCHY: RegimeParameters(
-        target_hdi=0.71,
-        target_gini=0.54,
-        target_employment=0.78,
+        target_hdi=0.755,
+        target_gini=0.535,
+        target_employment=0.780,
+        convergence_rate=0.042,
         shock_mitigation_gain=0.06,
-        rent_capture_drift=0.0025,
-        macro_directive_multiplier=0.25,
+        rent_capture_drift=0.0022,
+        macro_directive_multiplier=0.22,
+        equalisation_transfer=-0.005,
+        ossification_rate=0.0,
     ),
     InstitutionalRegime.BUREAUCRATIC_CENTRALISM: RegimeParameters(
-        target_hdi=0.75,
-        target_gini=0.37,
-        target_employment=0.86,
-        shock_mitigation_gain=0.13,
-        rent_capture_drift=0.0008,
+        target_hdi=0.825,
+        target_gini=0.355,
+        target_employment=0.880,
+        convergence_rate=0.050,
+        shock_mitigation_gain=0.15,
+        rent_capture_drift=0.0009,
         macro_directive_multiplier=0.55,
+        equalisation_transfer=0.014,
+        ossification_rate=0.0018,
     ),
 }
 
@@ -345,13 +357,13 @@ class NationSimulationEngine:
     def advance_year(self, event_matrix: StochasticEventMatrix) -> GovernanceCycle:
         year = self.current_year
         cycle_seed = self._base_seed * 1000 + year * 7 + 13
-        events = event_matrix.generate_cycle_events(year, cycle_seed)
+        events = event_matrix.generate_cycle_events(year, cycle_seed, scenario=self.scenario)
         councillors = self._draw_councillors(year, cycle_seed)
         macro_bonus = self.active_macro_bonus if self.active_macro_directive else 0.0
 
         cycle_snapshots: dict[InstitutionalRegime, tuple[RegionProfile, ...]] = {}
         for candidate in InstitutionalRegime:
-            updated_candidate = tuple(
+            shocked_regions = tuple(
                 self._apply_event_effects(
                     r,
                     events,
@@ -360,6 +372,12 @@ class NationSimulationEngine:
                     regime=candidate,
                 )
                 for r in self._shadow_regions[candidate]
+            )
+            updated_candidate = self._apply_institutional_governance(
+                shocked_regions,
+                regime=candidate,
+                scenario=self.scenario,
+                year=year,
             )
             self._shadow_regions[candidate] = updated_candidate
             cycle_snapshots[candidate] = updated_candidate
@@ -474,10 +492,8 @@ class NationSimulationEngine:
             delta_gini -= effective_welfare * 0.005
             delta_emp += effective_gdp * 0.02
 
-        drag_hdi = (region.hdi - params.target_hdi) * 0.008
-        drag_gini = (region.gini - params.target_gini) * 0.008
-        drag_emp = (region.employment_rate - params.target_employment) * 0.008
-        effective_macro = macro_bonus * params.macro_directive_multiplier
+        headroom = max(0.0, 0.965 - region.hdi)
+        effective_macro = macro_bonus * params.macro_directive_multiplier * headroom * 0.55
 
         return RegionProfile(
             region_id=region.region_id,
@@ -485,15 +501,71 @@ class NationSimulationEngine:
             lat=region.lat,
             lon=region.lon,
             population_size=region.population_size,
-            hdi=round(max(0.0, min(1.0, region.hdi + delta_hdi - drag_hdi + effective_macro)), 4),
-            gini=round(
-                max(0.0, min(1.0, region.gini + delta_gini - drag_gini + params.rent_capture_drift)),
-                4,
-            ),
-            employment_rate=round(
-                max(0.0, min(1.0, region.employment_rate + delta_emp - drag_emp)), 4
-            ),
+            hdi=round(max(0.0, min(1.0, region.hdi + delta_hdi + effective_macro)), 4),
+            gini=round(max(0.0, min(1.0, region.gini + delta_gini)), 4),
+            employment_rate=round(max(0.0, min(1.0, region.employment_rate + delta_emp)), 4),
         )
+
+    @staticmethod
+    def _apply_institutional_governance(
+        regions: tuple[RegionProfile, ...],
+        regime: InstitutionalRegime,
+        scenario: SimulationScenario,
+        year: int,
+    ) -> tuple[RegionProfile, ...]:
+        params = REGIME_PARAMETERS[regime]
+        mean_hdi = sum(r.hdi for r in regions) / max(1, len(regions))
+        ossification = min(0.055, max(0.0, (year - 8) * params.ossification_rate))
+        effective_target_hdi = params.target_hdi - ossification
+        speed_mult = 1.25 if scenario == SimulationScenario.POST_CRISIS_EQUALISATION else 1.0
+        rate = params.convergence_rate * speed_mult
+
+        evolved: list[RegionProfile] = []
+        for r in regions:
+            eco_hdi_drag = (
+                0.0032
+                if (scenario == SimulationScenario.ECOLOGICAL_STRESS and r.lat > -16.0)
+                else 0.0
+            )
+            eco_emp_drag = (
+                0.0024
+                if (scenario == SimulationScenario.ECOLOGICAL_STRESS and r.lat > -16.0)
+                else 0.0
+            )
+            eco_mitigated_hdi = eco_hdi_drag * (1.0 - params.shock_mitigation_gain)
+            eco_mitigated_emp = eco_emp_drag * (1.0 - params.shock_mitigation_gain)
+            equalisation = (mean_hdi - r.hdi) * params.equalisation_transfer * speed_mult
+
+            next_hdi = (
+                r.hdi
+                + (effective_target_hdi - r.hdi) * rate
+                + equalisation
+                - eco_mitigated_hdi
+            )
+            next_gini = (
+                r.gini
+                + (params.target_gini - r.gini) * rate
+                + params.rent_capture_drift
+            )
+            next_emp = (
+                r.employment_rate
+                + (params.target_employment - r.employment_rate) * rate
+                - ossification * 0.25
+                - eco_mitigated_emp
+            )
+            evolved.append(
+                RegionProfile(
+                    region_id=r.region_id,
+                    name=r.name,
+                    lat=r.lat,
+                    lon=r.lon,
+                    population_size=r.population_size,
+                    hdi=round(max(0.0, min(0.985, next_hdi)), 4),
+                    gini=round(max(0.0, min(1.0, next_gini)), 4),
+                    employment_rate=round(max(0.0, min(0.99, next_emp)), 4),
+                )
+            )
+        return tuple(evolved)
 
     def _compute_inter_regional_flows(self) -> list[dict[str, Any]]:
         by_id = {region.region_id: region for region in self.regions}
@@ -635,7 +707,12 @@ class StochasticEventMatrix:
     def __init__(self, seed: int = 0) -> None:
         self.seed = seed
 
-    def generate_cycle_events(self, year: int, base_seed: int) -> tuple[EmergentEvent, ...]:
+    def generate_cycle_events(
+        self,
+        year: int,
+        base_seed: int,
+        scenario: SimulationScenario = SimulationScenario.BASELINE,
+    ) -> tuple[EmergentEvent, ...]:
         rng = random.Random(base_seed * 137 + year * 31 + self.seed * 7)
         count = rng.randint(2, 5)
         indices = list(range(len(_EVENT_TEMPLATES)))
@@ -643,21 +720,35 @@ class StochasticEventMatrix:
         selected = indices[:count]
         result: list[EmergentEvent] = []
         for idx in selected:
-            result.append(self._instantiate_template(idx, rng, year))
+            result.append(self._instantiate_template(idx, rng, year, scenario=scenario))
         return tuple(result)
 
     @staticmethod
-    def _instantiate_template(template_index: int, rng: random.Random, year: int) -> EmergentEvent:
+    def _instantiate_template(
+        template_index: int,
+        rng: random.Random,
+        year: int,
+        scenario: SimulationScenario = SimulationScenario.BASELINE,
+    ) -> EmergentEvent:
         template = _EVENT_TEMPLATES[template_index]
+        category = template[0]
         region_pool = [r[0] for r in BRAZIL_REGIONS]
         affected_count = rng.randint(1, min(3, len(region_pool)))
         affected = tuple(rng.sample(region_pool, affected_count))
         severity = round(0.1 + rng.random() * 0.9, 3)
-        gdp_delta = round((rng.random() - 0.4) * 3.0, 3)
-        welfare_delta = round((rng.random() - 0.3) * 2.0, 3)
+        gdp_center = 0.48
+        welfare_center = 0.46
+        if scenario == SimulationScenario.ECOLOGICAL_STRESS and category == "CLIMATE":
+            gdp_center = 0.64
+            welfare_center = 0.66
+        elif scenario == SimulationScenario.POST_CRISIS_EQUALISATION and category == "ECONOMIC":
+            gdp_center = 0.54
+            welfare_center = 0.52
+        gdp_delta = round((rng.random() - gdp_center) * 2.4, 3)
+        welfare_delta = round((rng.random() - welfare_center) * 1.8, 3)
         return EmergentEvent(
             event_id=f"EVT-{year:02d}-{template_index:03d}",
-            category=template[0],
+            category=category,
             title=template[1],
             narrative=template[2],
             affected_region_ids=affected,

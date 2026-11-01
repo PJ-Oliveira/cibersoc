@@ -18,7 +18,7 @@ flowchart TD
     Directive --> Mesh
     Ent["SocialistEnterprise (Bitmask 8, Cero CEOs)"] --> GCD["Reparto Racional 1/N por MCD en Días Enteros"]
     Mandate["MandateProtectionManager (Paridad IPC y Bloqueo >=180 Días)"] <--> Ent
-    SEEM["NationalSimulationEngine (150,7M Ciudadanos, Regímenes CRN A/B/C)"] <--> Mesh
+    SEEM["NationSimulationEngine (150,7M Ciudadanos, Regímenes CRN A/B/C)"] <--> Mesh
 ```
 
 ---
@@ -70,7 +70,7 @@ flowchart TD
 ## 6. Motor Contrafactual SEEM por Números Aleatorios Comunes ([`simulation/engine.py`](../../src/cibersoc/simulation/engine.py))
 
 - **150,7 Millones de Ciudadanos y Corredores Interregionales:** Modela 10 polos macrorregionales brasileños conectados por flujos insumo-producto (`INTER_REGIONAL_CORRIDORS`), sorteo criptográfico `CounterModeHmacDrbg` de consejeros regionales (`CouncillorSlot`) con cuarentena posmandato y mitigación sectorial de choques (`PORTFOLIO_EVENT_CATEGORIES`).
-- **Regímenes Institucionales bajo CRN:** `NationalSimulationEngine` evoluciona **(A) `CIBERSOC_DEMARCHY`**, **(B) `ELECTORAL_OLIGARCHY`** y **(C) `BUREAUCRATIC_CENTRALISM`** bajo idéntica secuencia de choques exógenos (`compare_regimes()`), aislando diferencias estructurales en IDH, convergencia del coeficiente de Gini y resiliencia del empleo.
+- **Regímenes Institucionales bajo CRN (`_apply_institutional_governance`):** `NationSimulationEngine` evoluciona **(A) `CIBERSOC_DEMARCHY`**, **(B) `ELECTORAL_OLIGARCHY`** y **(C) `BUREAUCRATIC_CENTRALISM`** bajo idéntica secuencia de choques exógenos (`compare_regimes()`). Cada ciclo anual aplica convergencia asintótica parametrizada (`convergence_rate`), transferencia interregional (`equalisation_transfer`: `+0.032` en A, `+0.014` en C, `-0.005` polarización en B), osificación burocrática tras el Año 8 (`ossification_rate = 0.0018` en C), arrastre climático persistente en biomas tropicales ($\text{lat} > -16^\circ$ bajo `ECOLOGICAL_STRESS`), aceleración reconstructiva (`1.25×` bajo `POST_CRISIS_EQUALISATION`) y margen cóncavo de frontera (`max(0, 0.965 - hdi)`) para directrices plebiscitarias.
 
 ---
 

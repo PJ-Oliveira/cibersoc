@@ -18,7 +18,7 @@ flowchart TD
     Directive --> Mesh
     Ent["SocialistEnterprise (Bitmask 8, Zero CEOs)"] --> GCD["GCD Integer-Day Rational 1/N Surplus Split"]
     Mandate["MandateProtectionManager (CPI Parity & >=180-Day Lock)"] <--> Ent
-    SEEM["NationalSimulationEngine (150.7M Citizens, CRN Regimes A/B/C)"] <--> Mesh
+    SEEM["NationSimulationEngine (150.7M Citizens, CRN Regimes A/B/C)"] <--> Mesh
 ```
 
 ---
@@ -70,7 +70,7 @@ flowchart TD
 ## 6. SEEM Common-Random-Numbers (CRN) Counterfactual Engine (`simulation/engine.py`)
 
 - **150.7M Citizens & Inter-Regional Corridors:** Models 10 Brazilian regional poles connected by `INTER_REGIONAL_CORRIDORS` input–output trade flows, cryptographic `CounterModeHmacDrbg` regional councillor sortition (`CouncillorSlot`) with 1-cycle post-mandate quarantine, and portfolio-matched shock mitigation (`PORTFOLIO_EVENT_CATEGORIES`).
-- **CRN Institutional Regimes:** `NationalSimulationEngine` advances **(A) `CIBERSOC_DEMARCHY`**, **(B) `ELECTORAL_OLIGARCHY`**, and **(C) `BUREAUCRATIC_CENTRALISM`** over identical exogenous shock streams (`compare_regimes()`), isolating structural differences in HDI convergence, convergent Gini dynamics, and employment resilience.
+- **CRN Institutional Regimes (`_apply_institutional_governance`):** `NationSimulationEngine` advances **(A) `CIBERSOC_DEMARCHY`**, **(B) `ELECTORAL_OLIGARCHY`**, and **(C) `BUREAUCRATIC_CENTRALISM`** over identical exogenous shock streams (`compare_regimes()`). Each annual step applies parameterised asymptotic convergence (`convergence_rate`), inter-regional transfer (`equalisation_transfer`: `+0.032` in A, `+0.014` in C, `-0.005` core-periphery polarization in B), post-Year-8 bureaucratic ossification (`ossification_rate = 0.0018` in C), persistent tropical biome stress ($\text{lat} > -16^\circ$ under `ECOLOGICAL_STRESS`), post-crisis reconstruction speed (`1.25×` under `POST_CRISIS_EQUALISATION`), and concave frontier headroom (`max(0, 0.965 - hdi)`) for plebiscitary directives.
 
 ---
 

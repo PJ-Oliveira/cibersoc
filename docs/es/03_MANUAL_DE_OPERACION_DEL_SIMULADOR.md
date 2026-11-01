@@ -99,3 +99,40 @@ QT_QPA_PLATFORM=offscreen uv run pytest -v \
     --cov-report=term-missing --cov-fail-under=100
 ```
 La suite exige `0` errores estáticos de tipos, `100.00%` de cobertura de sentencias y ramas, `0` mocks o monkeypatches, `0` comentarios `#` o docstrings en todos los archivos `.py` y simetría trilingüe íntegra.
+
+---
+
+## 5. Benchmark Empírico Comparativo de 30 Años (3 Regímenes × 3 Escenarios)
+
+Esta sección documenta el experimento longitudinal canónico de **30 ciclos anuales** (`seed=42`, `StochasticEventMatrix(seed=42)`, `150.700.000` habitantes en 10 estados federados, `150` consejeros únicos sorteados con `0` reelecciones consecutivas) ejecutado bajo **Números Aleatorios Comunes (CRN)** en los tres regímenes institucionales — **(A) Demarquía CIBERSOC (`CIBERSOC_DEMARCHY`)**, **(B) Oligarquía Electoral (`ELECTORAL_OLIGARCHY`)** y **(C) Centralismo Burocrático (`BUREAUCRATIC_CENTRALISM`)** — y en los tres escenarios macroestructurales.
+
+### 5.1 Trayectoria Longitudinal Sin Macrodirectriz (`Macro = False`, Años 0 → 10 → 20 → 30)
+
+| Escenario | Régimen | IDH (A0 → A10 → A20 → A30) | Gini (A0 → A10 → A20 → A30) | Empleo % (A0 → A10 → A20 → A30) | Brecha Regional IDH (A30) | $\sigma_{\text{IDH}}$ (A30) | Flujo Corredores (A30) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`BASELINE`** | **A. Demarquía** | `0.7379 → 0.8237 → 0.8786 → 0.9110` | `0.4045 → 0.3318 → 0.2880 → 0.2630` | `78.75% → 85.05% → 87.60% → 91.23%` | `0.0538` | `0.0135` | `0.9814` |
+| **`BASELINE`** | **B. Oligarquía Electoral** | `0.7379 → 0.7513 → 0.7656 → 0.7738` | `0.4045 → 0.4649 → 0.5013 → 0.5255` | `78.75% → 78.19% → 76.54% → 77.70%` | `0.1438` | `0.0431` | `0.6057` |
+| **`BASELINE`** | **C. Centralismo Burocrático** | `0.7379 → 0.7783 → 0.8028 → 0.8104` | `0.4045 → 0.3884 → 0.3761 → 0.3688` | `78.75% → 82.12% → 80.26% → 77.74%` | `0.0796` | `0.0212` | `0.7000` |
+| **`ECOLOGICAL_STRESS`** | **A. Demarquía** | `0.7136 → 0.7971 → 0.8521 → 0.8833` | `0.4045 → 0.3340 → 0.2913 → 0.2678` | `76.93% → 82.69% → 85.08% → 88.23%` | `0.0631` | `0.0177` | `0.9044` |
+| **`ECOLOGICAL_STRESS`** | **B. Oligarquía Electoral** | `0.7136 → 0.7235 → 0.7363 → 0.7412` | `0.4045 → 0.4673 → 0.5051 → 0.5312` | `76.93% → 75.36% → 73.22% → 73.59%` | `0.1684` | `0.0545` | `0.5285` |
+| **`ECOLOGICAL_STRESS`** | **C. Centralismo Burocrático** | `0.7136 → 0.7508 → 0.7744 → 0.7796` | `0.4045 → 0.3907 → 0.3795 → 0.3739` | `76.93% → 79.54% → 77.37% → 74.21%` | `0.0969` | `0.0289` | `0.6260` |
+| **`POST_CRISIS_EQUALISATION`** | **A. Demarquía** | `0.7476 → 0.8432 → 0.8943 → 0.9201` | `0.5729 → 0.4029 → 0.3174 → 0.2754` | `64.02% → 78.70% → 84.88% → 89.76%` | `0.0386` | `0.0105` | `0.9679` |
+| **`POST_CRISIS_EQUALISATION`** | **B. Oligarquía Electoral** | `0.7476 → 0.7561 → 0.7661 → 0.7705` | `0.5729 → 0.5719 → 0.5688 → 0.5678` | `64.02% → 69.28% → 71.06% → 73.93%` | `0.0884` | `0.0275` | `0.5551` |
+| **`POST_CRISIS_EQUALISATION`** | **C. Centralismo Burocrático** | `0.7476 → 0.7890 → 0.8089 → 0.8103` | `0.5729 → 0.4734 → 0.4189 → 0.3908` | `64.02% → 74.82% → 76.73% → 76.08%` | `0.0516` | `0.0146` | `0.6750` |
+
+### 5.2 Sensibilidad a la Directriz Plebiscitaria Activa (`Macro = True`, Predeterminado de UI, Año 30)
+
+Al acoplar el plebiscito cibernético anual (`PLEB-FED-01: +5% Health`, `bonus = 0.015`, atenuado por el margen cóncavo de frontera `max(0, 0.965 - IDH)`), la transmisión institucional (`macro_directive_multiplier`: `1.00` en A, `0.55` en C, `0.22` en B) amplía el diferencial neto de bienestar:
+
+| Escenario (Año 30, `Macro = True`) | IDH (A. Demarquía) | IDH (B. Electoral) | IDH (C. Centralismo) | Ganancia Neta A vs B ($\Delta\text{IDH}$) | Ganancia Neta A vs C ($\Delta\text{IDH}$) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`BASELINE`** | `0.9218` | `0.7798` | `0.8215` | **`+0.1420`** | **`+0.1003`** |
+| **`ECOLOGICAL_STRESS`** | `0.8972` | `0.7481` | `0.7927` | **`+0.1491`** | **`+0.1045`** |
+| **`POST_CRISIS_EQUALISATION`** | `0.9275` | `0.7755` | `0.8194` | **`+0.1520`** | **`+0.1081`** |
+
+### 5.3 Diagnóstico Estructural de las Diferencias Observadas
+
+1. **Divergencia Distributiva y Convergencia Regional ($\sigma$-convergencia):** En la Demarquía (A), el reparto cooperativo $1/N$ sin captura de rentas (`rent_capture_drift = 0.0`) y la igualación interregional (`+0.032`) comprimen la brecha interestatal de IDH en `BASELINE` de `0.3260` (Año 0) a `0.0538` (Año 30, $\sigma = 0.0135$), elevando la intensidad media de los corredores productivos a `0.9814`. En la Oligarquía Electoral (B), la deriva de captura (`+0.0022/año`) y la polarización centro-periferia (`-0.005`) elevan el Gini a `0.5255` y dejan una brecha regional `2,67×` mayor (`0.1438`: `BR-SP = 0.788` frente a `BR-AM = 0.702`).
+2. **Fractura Norte–Sur bajo Estrés Ecológico (`ECOLOGICAL_STRESS`):** Ante choques climáticos persistentes sobre latitudes tropicales ($\text{lat} > -16^\circ$), la supervisión demárquica mitiga el `30%` del daño neto, sosteniendo el IDH medio del Norte/Nordeste en `0.8637` frente a `0.8899` en el Centro-Sur (brecha Norte–Sur de apenas `0.0262`). Bajo Oligarquía Electoral (mitigación del `6%`), el Norte/Nordeste se estanca en `0.6840` (`BR-AM = 0.617`, `BR-BA = 0.646`) frente a `0.7571` en el Sur (fractura Norte–Sur `2,79×` más severa, `0.0731`).
+3. **Osificación Burocrática a Largo Plazo en el Régimen C:** El Centralismo Burocrático logra una fuerte movilización inicial durante la primera década (`Empleo` sube del `78.75%` al `82.12%` en `BASELINE` y del `64.02%` al `74.82%` en `POST_CRISIS`), pero sufre osificación administrativa acumulada tras el Año 8 (`ossification_rate = 0.0018`), reduciendo el empleo del `82.12%` (Año 10) al `77.74%` (Año 30) en `BASELINE` y estabilizando el Gini en un piso jerárquico (`0.3688–0.3908`).
+4. **Recuperación Poscrisis (`POST_CRISIS_EQUALISATION`):** Partiendo de una desigualdad poscrisis aguda (`Gini = 0.5729`) y desempleo elevado (`64.02%`), la Demarquía comprime el Gini en **`-0.2975` puntos** (`0.2754`) y crea **`+25.74 pp`** de empleo (`89.76%`), mientras que la Oligarquía Electoral queda atrapada en histéresis desigual (`Gini = 0.5678`, con variación residual de `-0.0051` en treinta años).

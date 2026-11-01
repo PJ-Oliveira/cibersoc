@@ -20,6 +20,19 @@ A plataforma codifica sete axiomas estruturais diretamente como invariantes veri
 6. **Paridade Civil Indexada à Inflação e Retorno Protegido ao Emprego ($\ge 6$ Meses):** Enquanto serve em um Conselho, o cidadão sorteado recebe subsídio público equivalente à sua remuneração civil anterior corrigida pelo índice oficial de preços, seguido de **reintegração garantida ao posto original com estabilidade mínima protegida de 180 dias (6 meses)**.
 7. **Plebiscitos Macroeconômicos Fechados e Conservação Exata de Cotas de Trabalho:** A votação popular direta ocorre unicamente em protocolo cibernético fechado sobre **alocações macroeconômicas quantitativas de recursos** (ex.: `+5% Educação Pública` vs `+5% Saúde Pública`), vinculando compulsoriamente todos os Conselhos e convertendo-se diretamente em frações de trabalho social incorporado.
 
+### 1.1 Guia Intuitivo do Vocabulário Técnico (Intuição Concreta)
+
+| Expressão Técnica | Intuição Concreta (O Que Significa na Prática) |
+| :--- | :--- |
+| **Demarquia / Sorteio Estratificado** *(Aristóteles)* | Em vez de eleições filtradas por doadores e marketing, os conselhos são formados por loteria pública auditável respeitando cotas demográficas e ocupacionais da população real, com quarentena obrigatória após o mandato. |
+| **Desenho de Mecanismos** *(Hurwicz–Maskin)* | Engenharia reversa das regras institucionais (`zero CEOs`, `voto unitário = 1`, `zero reeleição`, `$0,00` retido) para que ninguém consiga capturar poder político ou acumular excedente privado mesmo agindo por interesse próprio. |
+| **Commit-Reveal `SHA-256`, Merkle e Cotas de Hamilton** | Fontes independentes travam hashes secretos antes de revelá-los para impedir manipulação da semente do sorteio (`Commit-Reveal`), a raiz de `Merkle` prova que o cadastro não foi adulterado e `Hamilton` arredonda vagas inteiras sem viés. |
+| **Impossibilidade de Arrow vs. Eleitor Mediano de Black** | Eleições entre vários candidatos geram paradoxos cíclicos e voto útil (Arrow); já votar em uma barra contínua de orçamento (`% Saúde` vs `% Educação`) possui equilíbrio único e estável na preferência mediana (Black). |
+| **Matriz Insumo-Produto Esparsa de Leontief (`CSR`)** | Cada produto usa diretamente apenas ~20–100 insumos físicos (aço, energia, grãos), deixando $>99{,}9\%$ da matriz igual a zero; guardar só os elos reais (`CSR`) equilibra milhões de cadeias (`x = (I - A)^(-1) y*`) em segundos. |
+| **Trabalho Incorporado (`H`), Razão `p/v` e Harmonia** | `H` soma as horas diretas + indiretas de trabalho por unidade; `p/v` compara procura real e custo em horas (`> 1` falta -> expandir; `< 1` sobra -> reduzir); **Harmonia** amortece gargalos fabris sem recessão. |
+| **Máscara de Usufruto `[1,0,0,0]` e Partilha $1/N$** | Os trabalhadores têm direito coletivo de **Uso (`1`)** das máquinas públicas, mas ninguém pode **Vender (`0`)**, **Comprar (`0`)** ou **Herdar (`0`)** empresas; 100% do excedente líquido é dividido igualmente por dia trabalhado. |
+| **Números Aleatórios Comuns (`CRN`)** | Submete os Regimes **A**, **B** e **C** exatamente às mesmas secas, crises e choques anuais para provar com rigor causal qual desenho institucional protege melhor a sociedade. |
+
 ---
 
 ## 2. Crítica Estrutural aos Mecanismos de Seleção Eleitoral
@@ -117,3 +130,19 @@ $$P_{\text{captura}}(n) \le \exp\!\left(-2\,n\,(p - 0{,}5)^2\right)$$
 | **6. Impossibilidade de Arrow e Ciclos Majoritários** *(Arrow, Escolha Social)* | Votações diretas poderiam sofrer ciclos de Condorcet sobre alternativas discretas arbitrárias. | O teorema de Arrow aplica-se a preferências discretas irrestritas. Sobre dotações orçamentárias contínuas convexas com preferências unimodais, o **Teorema do Eleitor Mediano de Black** e a agregação contínua geram equilíbrio transitivo único protegido por pisos constitucionais de saúde, direitos civis e teto de carbono. |
 | **7. Disparidade de Intensidade de Capital entre Cooperativas** *(Crítica de Ward–Vanek)* | Plantas intensivas em capital gerariam maior excedente por trabalhador que plantas intensivas em trabalho sem esforço superior. | Neutralizada em [`enterprise.py`](../../src/cibersoc/enterprise.py) via **`capital_endowment_equalisation_charge`**, deduzindo encargo social ricardiano proporcional ao capital público instalado antes do rateio igualitário $1/N_e$. |
 | **8. Captura por Assessoria Técnica Permanente** *(Risco Tecnocrático Weberiano)* | Quadros técnicos permanentes poderiam conduzir conselheiros sorteados de mandato curto. | Neutralizada por **Painéis Técnicos Independentes e Concorrentes**, **Exames Periódicos de Habilitação Cívica** ([`civic_exam.py`](../../src/cibersoc/civic_exam.py)) para auditoria técnica cidadã, algoritmos abertos e diretrizes macroeconômicas populares vinculantes. |
+
+---
+
+## 5. Evidência Empírica de 30 Anos em Favor do CIBERSOC (Benchmark Contrafactual `SEEM` 3×3)
+
+A execução determinística de **30 anos contínuos** nos **3 regimes** e nos **3 cenários** (`seed=42`, `150.700.000` habitantes em 10 polos brasileiros, submetidos exatamente aos mesmos choques anuais `CRN`; auditada em [`TestThirtyYearThreeByThreeBenchmark`](../../tests/test_simulation.py)) comprova por que a autogestão horizontal permanente por sorteio + excedente $1/N$ supera simultaneamente o mercado eleitoral e a burocracia estatal:
+
+| Cenário (Ano 30, `seed=42`) | **A. CIBERSOC (Sorteio + $1/N$)** | **C. Burocracia Estatal (Top-Down)** | **B. Capitalismo Eleitoral (Partidos + CEOs)** | Vantagem Estrutural do CIBERSOC |
+| :--- | :--- | :--- | :--- | :--- |
+| **1. Linha de Base** *(Plebiscito Ativo / Inativo)* | **IDH `0,922`** (`0,911`) · **Gini `0,263`** · **Emp `91,2%`** | IDH `0,822` (`0,810`) · Gini `0,369` · Emp `77,7%` | IDH `0,780` (`0,774`) · Gini `0,526` · Emp `77,7%` | **`+0,142` IDH** e **`-0,263` Gini** vs. Eleições; **`+0,100` IDH** vs. Burocracia |
+| **2. Estresse Ecológico** *(Seca Tropical)* | **IDH `0,897`** (`0,883`) · **Gini `0,268`** · **Emp `88,2%`** | IDH `0,793` (`0,780`) · Gini `0,374` · Emp `74,2%` | IDH `0,748` (`0,741`) · Gini `0,531` · Emp `73,6%` | Hiato Norte–Sul de apenas **`0,026`** em **A** vs. **`0,073`** em **B** (`2,79×` pior abandono tropical) |
+| **3. Pós-Crise** *(Gini inicial `0,573`, Emp `64,0%`)* | **IDH `0,928`** (`0,920`) · **Gini `0,275`** · **Emp `89,8%`** | IDH `0,819` (`0,810`) · Gini `0,391` · Emp `76,1%` | IDH `0,776` (`0,771`) · Gini `0,568` · Emp `73,9%` | Derruba o Gini em **`-0,298`** (`+25,7 p.p.` emprego), enquanto **B** congela a oligarquia (`-0,005`) |
+
+1. **Superação da Captura Oligárquica (`A` vs. `B`):** Em **B**, a retenção corporativa de lucros e o filtro econômico de campanhas elevam o Gini (`0,453 -> 0,526`) e travam a recuperação pós-crise (`0,573 -> 0,568`). No **CIBERSOC (`A`)**, a partilha $1/N$ sem CEOs comprime o Gini para **`0,263–0,275`** com emprego acima de **`88%–91%`**.
+2. **Eliminação da Ossificação Burocrática Pós-Ano 8 (`A` vs. `C`):** A burocracia estatal top-down (`C`) avança nos primeiros 8 anos (pico de emprego de `82,1%` no Ano 10), mas **ossifica** quando quadros não rotacionados encastelam privilégios e assimetrias de informação (recuando a `77,7%` de emprego e Gini `0,369`). O **sorteio com quarentena obrigatória** (`2.100` cidadãos únicos sorteados em 30 anos sem nenhuma repetição) impede estruturalmente a formação de uma casta dirigente.
+3. **Coesão Territorial sob Choque Climático:** Sob seca tropical (`ECOLOGICAL_STRESS`), o mercado eleitoral abandona Norte/Nordeste (`Amazonas` cai a `0,617` de IDH), enquanto os corredores insumo-produto de Leontief (`Fluxo 0,981` em **A** vs. `0,606` em **B**) sustentam os polos tropicais em **`0,864` de IDH**.

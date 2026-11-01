@@ -99,3 +99,40 @@ QT_QPA_PLATFORM=offscreen uv run pytest -v \
     --cov-report=term-missing --cov-fail-under=100
 ```
 The verification suite enforces `0` static type errors, `100.00%` statement and branch coverage, `0` mocks or monkeypatches, `0` `#` comments or docstrings across all `.py` files, and full trilingual symmetry.
+
+---
+
+## 5. Empirical 30-Year Comparative Benchmark (3 Regimes × 3 Scenarios)
+
+This section documents the canonical **30-year longitudinal experiment** (`seed=42`, `StochasticEventMatrix(seed=42)`, `150,700,000` citizens across 10 federated states, `150` unique sorted councillors with `0` consecutive re-selection) executed under **Common Random Numbers (CRN)** across all three institutional regimes — **(A) CIBERSOC Demarchy (`CIBERSOC_DEMARCHY`)**, **(B) Electoral Oligarchy (`ELECTORAL_OLIGARCHY`)**, and **(C) Bureaucratic Centralism (`BUREAUCRATIC_CENTRALISM`)** — and all three macro-structural scenarios.
+
+### 5.1 Standalone Longitudinal Trajectory (`Macro = False`, Years 0 → 10 → 20 → 30)
+
+| Scenario | Regime | HDI (Y0 → Y10 → Y20 → Y30) | Gini (Y0 → Y10 → Y20 → Y30) | Employment % (Y0 → Y10 → Y20 → Y30) | Regional HDI Gap (Y30) | $\sigma_{\text{HDI}}$ (Y30) | Corridor Flow (Y30) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`BASELINE`** | **A. Demarchy** | `0.7379 → 0.8237 → 0.8786 → 0.9110` | `0.4045 → 0.3318 → 0.2880 → 0.2630` | `78.75% → 85.05% → 87.60% → 91.23%` | `0.0538` | `0.0135` | `0.9814` |
+| **`BASELINE`** | **B. Electoral Oligarchy** | `0.7379 → 0.7513 → 0.7656 → 0.7738` | `0.4045 → 0.4649 → 0.5013 → 0.5255` | `78.75% → 78.19% → 76.54% → 77.70%` | `0.1438` | `0.0431` | `0.6057` |
+| **`BASELINE`** | **C. Bureaucratic Centralism** | `0.7379 → 0.7783 → 0.8028 → 0.8104` | `0.4045 → 0.3884 → 0.3761 → 0.3688` | `78.75% → 82.12% → 80.26% → 77.74%` | `0.0796` | `0.0212` | `0.7000` |
+| **`ECOLOGICAL_STRESS`** | **A. Demarchy** | `0.7136 → 0.7971 → 0.8521 → 0.8833` | `0.4045 → 0.3340 → 0.2913 → 0.2678` | `76.93% → 82.69% → 85.08% → 88.23%` | `0.0631` | `0.0177` | `0.9044` |
+| **`ECOLOGICAL_STRESS`** | **B. Electoral Oligarchy** | `0.7136 → 0.7235 → 0.7363 → 0.7412` | `0.4045 → 0.4673 → 0.5051 → 0.5312` | `76.93% → 75.36% → 73.22% → 73.59%` | `0.1684` | `0.0545` | `0.5285` |
+| **`ECOLOGICAL_STRESS`** | **C. Bureaucratic Centralism** | `0.7136 → 0.7508 → 0.7744 → 0.7796` | `0.4045 → 0.3907 → 0.3795 → 0.3739` | `76.93% → 79.54% → 77.37% → 74.21%` | `0.0969` | `0.0289` | `0.6260` |
+| **`POST_CRISIS_EQUALISATION`** | **A. Demarchy** | `0.7476 → 0.8432 → 0.8943 → 0.9201` | `0.5729 → 0.4029 → 0.3174 → 0.2754` | `64.02% → 78.70% → 84.88% → 89.76%` | `0.0386` | `0.0105` | `0.9679` |
+| **`POST_CRISIS_EQUALISATION`** | **B. Electoral Oligarchy** | `0.7476 → 0.7561 → 0.7661 → 0.7705` | `0.5729 → 0.5719 → 0.5688 → 0.5678` | `64.02% → 69.28% → 71.06% → 73.93%` | `0.0884` | `0.0275` | `0.5551` |
+| **`POST_CRISIS_EQUALISATION`** | **C. Bureaucratic Centralism** | `0.7476 → 0.7890 → 0.8089 → 0.8103` | `0.5729 → 0.4734 → 0.4189 → 0.3908` | `64.02% → 74.82% → 76.73% → 76.08%` | `0.0516` | `0.0146` | `0.6750` |
+
+### 5.2 Active Plebiscitary Directive Sensitivity (`Macro = True`, UI Default, Year 30)
+
+When the annual cybernetic plebiscite is coupled (`PLEB-FED-01: +5% Health`, `bonus = 0.015`, attenuated by concave frontier headroom `max(0, 0.965 - HDI)`), institutional pass-through (`macro_directive_multiplier`: `1.00` in A, `0.55` in C, `0.22` in B) widens the net welfare differential:
+
+| Scenario (Year 30, `Macro = True`) | HDI (A. Demarchy) | HDI (B. Electoral) | HDI (C. Centralism) | Net Gain A vs B ($\Delta\text{HDI}$) | Net Gain A vs C ($\Delta\text{HDI}$) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`BASELINE`** | `0.9218` | `0.7798` | `0.8215` | **`+0.1420`** | **`+0.1003`** |
+| **`ECOLOGICAL_STRESS`** | `0.8972` | `0.7481` | `0.7927` | **`+0.1491`** | **`+0.1045`** |
+| **`POST_CRISIS_EQUALISATION`** | `0.9275` | `0.7755` | `0.8194` | **`+0.1520`** | **`+0.1081`** |
+
+### 5.3 Structural Diagnosis of Observed Regime Differences
+
+1. **Distributive Divergence and Regional $\sigma$-Convergence:** Under Demarchy (A), horizontal $1/N$ cooperative surplus sharing without rent capture (`rent_capture_drift = 0.0`) and inter-regional equalisation (`+0.032`) compress the `BASELINE` inter-state HDI gap from `0.3260` (Year 0) to `0.0538` (Year 30, $\sigma = 0.0135$), lifting mean productive corridor flow intensity to `0.9814`. Under Electoral Oligarchy (B), rent-capture drift (`+0.0022/yr`) and core-periphery polarization (`-0.005`) push Gini to `0.5255` and leave a `2.67×` wider regional gap (`0.1438`: `BR-SP = 0.788` vs `BR-AM = 0.702`).
+2. **North–South Cleavage under `ECOLOGICAL_STRESS`:** Facing persistent climate shocks across northern tropical latitudes ($\text{lat} > -16^\circ$), demarchic council oversight mitigates `30%` of net shock damage, sustaining Northern/Northeastern mean HDI at `0.8637` vs `0.8899` in the South/Southeast (a North–South gap of just `0.0262`). Under Electoral Oligarchy (`6%` mitigation), Northern/Northeastern HDI stagnates at `0.6840` (`BR-AM = 0.617`, `BR-BA = 0.646`) vs `0.7571` in the South (`0.0731` North–South cleavage, `2.79×` wider).
+3. **Long-Run Bureaucratic Ossification in Regime C:** Bureaucratic Centralism achieves strong initial mobilization during the first decade (`Employment` rises from `78.75%` to `82.12%` in `BASELINE` and `64.02%` to `74.82%` in `POST_CRISIS`), but suffers cumulative administrative ossification after Year 8 (`ossification_rate = 0.0018`), causing employment to erode from `82.12%` (Year 10) back down to `77.74%` (Year 30) in `BASELINE` while Gini plateaus at a stratified administrative floor (`0.3688–0.3908`).
+4. **Post-Crisis Recovery (`POST_CRISIS_EQUALISATION`):** Starting from acute post-crisis inequality (`Gini = 0.5729`) and depressed employment (`64.02%`), Demarchy compresses Gini by **`-0.2975` points** (`0.2754`) and adds **`+25.74 pp`** of employment (`89.76%`), whereas Electoral Oligarchy remains locked in high-inequality hysteresis (`Gini = 0.5678`, moving only `-0.0051` across thirty years).

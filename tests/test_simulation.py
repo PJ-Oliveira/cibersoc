@@ -741,14 +741,28 @@ class TestViewerLegend:
                 entry = catalog.translate(f"simulation.viewer.{term_key}")
                 assert ":" in entry
 
-    def test_html_has_no_year_cap_and_uses_new_hud_fields(self) -> None:
+    def test_html_has_no_year_cap_and_uses_new_hud_fields(self, qtbot: Any) -> None:
         from cibersoc.ui import simulation_view as sv
 
         assert "total_years" not in sv._THREE_JS_HTML
         assert "1 / 10" not in sv._THREE_JS_HTML
+        assert "v-comp" not in sv._THREE_JS_HTML
         assert "citizens_drawn" in sv._THREE_JS_HTML
+        assert "sr-dem" in sv._THREE_JS_HTML
+        assert "sr-cen" in sv._THREE_JS_HTML
+        assert "sr-oli" in sv._THREE_JS_HTML
         assert "window.updateHud" in sv._THREE_JS_HTML
         assert "window.applyI18n" in sv._THREE_JS_HTML
+
+        tab = sv.SimulationTab()
+        qtbot.addWidget(tab)
+        tab.spn_years_step.setValue(10)
+        tab._on_advance_year()
+        tab.cmb_regime.setCurrentIndex(2)
+        metrics_text = tab.lbl_status_metrics.text()
+        assert "[A]" in metrics_text
+        assert "[C]" in metrics_text
+        assert "[B]" in metrics_text
 
     def test_push_viewer_texts_sends_strings_once(self, qtbot: Any) -> None:
         from cibersoc.ui.simulation_view import SimulationTab
@@ -935,3 +949,117 @@ def test_simulation_orchestrator_directive_none() -> None:
 
     orch_live = SimulationOrchestrator()
     assert orch_live.active_macro_directive is not None
+
+
+class TestThirtyYearThreeByThreeBenchmark:
+    def test_thirty_year_3x3_matrix_without_and_with_macro_directive(self) -> None:
+        results_by_mode: dict[tuple[SimulationScenario, bool], dict[str, dict[str, float]]] = {}
+        for scenario in SimulationScenario:
+            for macro_enabled in (False, True):
+                engine = NationSimulationEngine(seed=42, scenario=scenario)
+                if macro_enabled:
+                    engine.set_active_macro_directive("PLEB-FED-01: +5% Health")
+                matrix = StochasticEventMatrix(seed=42)
+                for _ in range(30):
+                    engine.advance_year(matrix)
+
+                assert engine.current_year == 31
+                assert engine.citizens_drawn == 30 * len(GOVERNANCE_PORTFOLIOS)
+                comp = engine.compare_regimes()
+                results_by_mode[(scenario, macro_enabled)] = comp
+
+                dem = comp[InstitutionalRegime.CIBERSOC_DEMARCHY.value]
+                oli = comp[InstitutionalRegime.ELECTORAL_OLIGARCHY.value]
+                cen = comp[InstitutionalRegime.BUREAUCRATIC_CENTRALISM.value]
+
+                assert dem["aggregate_hdi"] > cen["aggregate_hdi"] > oli["aggregate_hdi"]
+                assert dem["aggregate_gini"] < cen["aggregate_gini"] < oli["aggregate_gini"]
+                assert dem["aggregate_employment"] > cen["aggregate_employment"]
+                assert dem["aggregate_employment"] > oli["aggregate_employment"]
+
+                gaps: dict[InstitutionalRegime, float] = {}
+                flows: dict[InstitutionalRegime, float] = {}
+                for regime in InstitutionalRegime:
+                    engine.switch_regime(regime)
+                    assert all(0.55 < r.hdi < 0.985 for r in engine.regions)
+                    gaps[regime] = max(r.hdi for r in engine.regions) - min(
+                        r.hdi for r in engine.regions
+                    )
+                    corridor_flows = engine._compute_inter_regional_flows()
+                    flows[regime] = sum(f["intensity"] for f in corridor_flows) / len(
+                        corridor_flows
+                    )
+
+                assert (
+                    gaps[InstitutionalRegime.CIBERSOC_DEMARCHY]
+                    < gaps[InstitutionalRegime.BUREAUCRATIC_CENTRALISM]
+                    < gaps[InstitutionalRegime.ELECTORAL_OLIGARCHY]
+                )
+                assert (
+                    flows[InstitutionalRegime.CIBERSOC_DEMARCHY]
+                    > flows[InstitutionalRegime.BUREAUCRATIC_CENTRALISM]
+                    > flows[InstitutionalRegime.ELECTORAL_OLIGARCHY]
+                )
+
+        for scenario in SimulationScenario:
+            no_macro = results_by_mode[(scenario, False)]
+            with_macro = results_by_mode[(scenario, True)]
+            for regime in InstitutionalRegime:
+                assert (
+                    with_macro[regime.value]["aggregate_hdi"]
+                    > no_macro[regime.value]["aggregate_hdi"]
+                )
+            dem_gain = (
+                with_macro[InstitutionalRegime.CIBERSOC_DEMARCHY.value]["aggregate_hdi"]
+                - no_macro[InstitutionalRegime.CIBERSOC_DEMARCHY.value]["aggregate_hdi"]
+            )
+            oli_gain = (
+                with_macro[InstitutionalRegime.ELECTORAL_OLIGARCHY.value]["aggregate_hdi"]
+                - no_macro[InstitutionalRegime.ELECTORAL_OLIGARCHY.value]["aggregate_hdi"]
+            )
+            assert dem_gain > oli_gain
+
+    def test_ecological_cleavage_ossification_and_post_crisis_compression(self) -> None:
+        eco_engine = NationSimulationEngine(
+            seed=42, scenario=SimulationScenario.ECOLOGICAL_STRESS
+        )
+        eco_matrix = StochasticEventMatrix(seed=42)
+        for _ in range(30):
+            eco_engine.advance_year(eco_matrix)
+
+        eco_engine.switch_regime(InstitutionalRegime.CIBERSOC_DEMARCHY)
+        dem_north = [r.hdi for r in eco_engine.regions if r.lat > -16.0]
+        dem_south = [r.hdi for r in eco_engine.regions if r.lat <= -16.0]
+        dem_ns_gap = abs(sum(dem_south) / len(dem_south) - sum(dem_north) / len(dem_north))
+
+        eco_engine.switch_regime(InstitutionalRegime.ELECTORAL_OLIGARCHY)
+        oli_north = [r.hdi for r in eco_engine.regions if r.lat > -16.0]
+        oli_south = [r.hdi for r in eco_engine.regions if r.lat <= -16.0]
+        oli_ns_gap = abs(sum(oli_south) / len(oli_south) - sum(oli_north) / len(oli_north))
+        assert dem_ns_gap < oli_ns_gap * 0.5
+
+        eco_engine.switch_regime(InstitutionalRegime.BUREAUCRATIC_CENTRALISM)
+        emp_yr10 = eco_engine.cycles[9].aggregate_employment
+        emp_yr30 = eco_engine.cycles[29].aggregate_employment
+        assert emp_yr30 < emp_yr10
+
+        crisis_engine = NationSimulationEngine(
+            seed=42, scenario=SimulationScenario.POST_CRISIS_EQUALISATION
+        )
+        init_gini = sum(
+            r.gini * r.population_size for r in crisis_engine.regions
+        ) / crisis_engine.total_population
+        init_emp = sum(
+            r.employment_rate * r.population_size for r in crisis_engine.regions
+        ) / crisis_engine.total_population
+        crisis_matrix = StochasticEventMatrix(seed=42)
+        for _ in range(30):
+            crisis_engine.advance_year(crisis_matrix)
+
+        crisis_comp = crisis_engine.compare_regimes()
+        dem_crisis = crisis_comp[InstitutionalRegime.CIBERSOC_DEMARCHY.value]
+        oli_crisis = crisis_comp[InstitutionalRegime.ELECTORAL_OLIGARCHY.value]
+        assert (init_gini - dem_crisis["aggregate_gini"]) > 0.28
+        assert (dem_crisis["aggregate_employment"] - init_emp) > 0.24
+        assert abs(init_gini - oli_crisis["aggregate_gini"]) < 0.01
+
