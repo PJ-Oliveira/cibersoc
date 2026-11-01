@@ -1,127 +1,101 @@
 # 03. Manual de Operação do Simulador
 
-## 1. Provisionamento do Ambiente e Execução do Simulador
+## 1. Provisionamento do Ambiente e Inicialização do Simulador
 
-O simulador **CIBERSOC** roda em **Python 3.12+** (os testes CI utilizam CPython 3.14).  Todas as dependências são declaradas em `uv.lock` e instaladas com o gerenciador ultra‑rápido **uv**, garantindo um ambiente determinístico e reproduzível em macOS, Linux e Windows.
+O simulador **CIBERSOC** executa sobre **Python 3.12, 3.13 e 3.14** em macOS, Linux e Windows. Todas as dependências estão fixadas deterministicamente em [`uv.lock`](../../uv.lock) via **uv**.
 
-### 1.1 Clonagem e Criação do Ambiente Virtual Isolado
+### 1.1 Clonagem e Sincronização do Ambiente Virtual Isolado
 ```bash
 git clone https://github.com/PJ-Oliveira/cibersoc.git
 cd cibersoc
-uv sync                # cria .venv e instala as versões exatas de uv.lock
+uv sync --all-extras --all-groups
 ```
-> **Por que `uv`?**  Diferente de `pip`/`requirements.txt`, `uv` resolve o grafo de dependências uma única vez, grava um lock file e nunca baixa novamente os mesmos pacotes, eliminando surpresas do tipo “funciona na minha máquina”.
 
-### 1.2 Executando a UI Gráfica (PySide6)
+### 1.2 Executando o Cliente Gráfico Desktop (PySide6)
 ```bash
-.venv/bin/python cibersoc_ui.py
-# ou, após o script de entrada ser instalado:
-.venv/bin/cibersoc-ui
+uv run python cibersoc_ui.py
+# ou pelo script de console instalado:
+uv run cibersoc-ui
 ```
-Ao iniciar, a UI exibe um **Diálogo de Seleção de Checkpoint**:
-- **Novo** – inicia uma simulação limpa.
-- Qualquer checkpoint salvo previamente (pasta com timestamp em `simulation_data/checkpoints/`).
-Selecionar um checkpoint carrega `population.json`, `mesh.json` e o snapshot de auditoria, permitindo retomar exatamente de onde parou.
+Snapshots determinísticos do cadastro populacional, da malha de conselhos e da auditoria de integridade podem ser gravados a qualquer momento pelo botão **Salvar Snapshot (`btn_save_checkpoint`)** na Aba 2 ou programaticamente em `simulation_data/` e `simulation_data/checkpoints/`.
 
-### 1.3 Executando o Simulador CLI Trilingue
+### 1.3 Executando o Simulador CLI Trilíngue Determinístico
 ```bash
-.venv/bin/python run_simulation.py --locale en-GB   # English (UK)
-.venv/bin/python run_simulation.py --locale pt      # Português
-.venv/bin/python run_simulation.py --locale es      # Español
+uv run python run_simulation.py --locale en-GB
+uv run python run_simulation.py --locale pt
+uv run python run_simulation.py --locale es
 ```
-O CLI realiza uma execução end‑to‑end determinística e imprime um relatório localizado contendo:
-- Estatísticas da população
-- Composição dos conselhos por nível
-- Resultado do último plebiscito macroeconômico
-- Distribuição do excedente empresarial
+O CLI executa uma orquestração ponta a ponta determinística e imprime quatro seções traduzidas:
+- **`[1]` Sorteio, Conselhos Federados e Habilitação Cívica:** Provas criptográficas do ciclo ativo, quarentenas e resumo de habilitação cívica.
+- **`[2]` Economia Cooperativa e Paridade de Mandato:** Excedente líquido, rateio exato $1/N$ por trabalhador, retenção corporativa `$0.00` e proteção indexada pelo IPCA.
+- **`[3]` Macro-Alocação Cibernética e Feedback do Plano:** Apuração plebiscitária, cotas de trabalho incorporado, produção bruta de Leontief, Harmonia de curto prazo e feedback de escoamento/teto de carbono.
+- **`[4]` Integridade Autônoma e Trilha de Auditoria:** Conformidade AST/lexer de Clean Code, simetria trilíngue e eventos auditados.
 
-## 2. Playbooks para Tarefas Comuns
+---
 
-### Playbook A – Sortição Multiciclo & Verificação de Quarentena
-1. Abra a **Aba 2 – Sortição & Quarentena**.
-2. Observe o banner do ciclo (`CICLO DEMÁRQUICO #01`): `76` cidadãos servem nos 5 Conselhos (`20` Federal + `16` Estadual + `20` Municipal + `10` Boqueirão + `10` Matriz), `Em Quarentena = 0`, `Reincidência Consecutiva = 0`.
-3. Pressione **Executar Próximo Ciclo de Sortição**.
-   - `SimulationOrchestrator.execute_next_sortition_cycle` finaliza os mandatos atuais, move os `76` conselheiros que saem para a quarentena criptográfica (fora da urna) e sorteia `76` novos conselheiros entre os `244` cidadãos elegíveis restantes via protocolo **Commit‑Reveal SHA‑256** com cotas de Hamilton.
-4. Verifique que o selo de resumo mostra `Ex‑Conselheiros Retirados da Urna (Quarentena) = 76` e `Reincidência Consecutiva = 0`, e que a **Tabela de Provas** apresenta status verde `VERIFICADA (SHA‑256)` para cada conselho.
-5. Pressione novamente **Executar Próximo Ciclo de Sortição** (Ciclo `#03`): os conselheiros do Ciclo 1 recuperam a elegibilidade após 1 ciclo de resfriamento, enquanto os do Ciclo 2 passam à quarentena, mantendo invariante a taxa zero de reeleição consecutiva.
+## 2. Playbooks Operacionais
 
-### Playbook B – Parametrização de Plebiscito Macro
-1. Mude para a **Aba 3 – Alocação Macro‑Cibernética**.
-2. Defina os dois spin‑boxes de cédulas:
-   - `+5 % Educação` → `750`
-   - `+5 % Saúde` → `250`
-3. Clique em **Apurar Plebiscito & Broadcast Diretriz Compulsória**.
-   - A diretiva vencedora passa para `EDU+5` (1000 cédulas auditadas).
-   - O cálculo de mudança contínua de Cockshott atualiza o índice de Harmonia de curto prazo para `‑2,50 %` (tendência à Educação).
-   - A **Tabela de Input‑Output** atualiza a parcela votada, demanda final `$y^*`, produção bruta `$x`, horas‑trabalho embutidas `$H` e o índice de Harmonia por setor.
-4. Use os botões **Testar Nome de Candidato na Cédula** e **Simular Desvio Orçamentário do Conselho** para confirmar que conteúdo ilegal de cédula e alterações de orçamento não autorizadas são bloqueados imediatamente.
+### Playbook A — Sorteio Multiciclo, Quarentena e Habilitação Cívica
+1. Abra a **Aba 2 (`Sorteio e Quarentena`)**. Observe o Ciclo `#01`: `76` conselheiros ativos nos 5 conselhos (`20` Federal + `16` Estadual + `20` Municipal + `10` Boqueirão + `10` Matriz), `Em Quarentena = 0`, `Reincidência Consecutiva = 0`.
+2. Clique em **Executar Próximo Ciclo de Sorteio (`btn_next_cycle`)**:
+   - Os conselheiros cessantes entram em quarentena criptográfica; `76` novos conselheiros são sorteados entre os `244` cidadãos elegíveis via `Commit-Reveal SHA-256` + cotas de Hamilton, mantendo `Reincidência Consecutiva = 0` e todas as provas `VERIFICADA (SHA-256)`.
+3. Clique em **Executar Rodada de Habilitação Cívica (`btn_civic_round`)** para registrar notas nas 4 disciplinas essenciais e verificar a isenção estatutária automática aos $\ge 60$ anos.
 
-### Playbook C – Distribuição de Excedente Empresarial & Equalização Ricardiana
-1. Abra a **Aba 4 – Empresa Sem CEO & Retorno Civil**.
-2. Ajuste a **Receita Operacional do Período** (`spn_revenue`) dentro do intervalo `120 000 – 500 000` (ex.: `220 000`).
-3. Pressione **Executar Distribuição Igual 1/N**.
-   - `SocialistEnterprise.distribute_period_profit` deduz:
-     * Custos materiais auditados
-     * Reserva de depreciação física
-     * Contribuição macro‑social
-     * Charge de equalização de dotação de capital (componente **Ricardiano**)
-   - O excedente líquido é dividido **exatamente** entre todos os trabalhadores ativos usando aritmética racional de dias‑inteiros; qualquer resto indivisível (< 1 ¢ por trabalhador) é transportado para o próximo período.
-   - O lucro retido corporativo permanece `0.00` por construção.
-4. Observe a **Tabela de Trabalhadores** atualizar: cada pagamento é exibido com duas casas decimais e a soma de todos os pagamentos equivale ao excedente líquido.
+### Playbook B — Macro-Plebiscito, Cotas de Trabalho e Teto de Carbono
+1. Abra a **Aba 3 (`Macro-Alocação Cibernética`)**, defina `+5% Educação` em `750` e `+5% Saúde` em `250`, e clique em **Apurar Plebiscito e Difundir Diretriz (`btn_run_plebiscite`)**.
+2. Verifique o deslocamento contínuo de Cockshott (`-2,50%`), a conservação exata das cotas de trabalho incorporado na tabela Insumo-Produto e o incremento `↓Dir` na Aba 1.
+3. Ajuste a **Razão Observada de Escoamento (`spn_clearing_ratio`)** e o **Orçamento de Carbono (`spn_carbon_budget`)**, clicando em **Iterar Plano (`btn_iterate_plan`)** para inspecionar o ajuste iterativo e a trava ecológica.
 
-### Playbook D – Ciclo de Mandato do Conselheiro, Indexação de Inflação & Proteção ao Emprego
-1. Na **Aba 4**, localize um trabalhador (ex.: `CID‑0001`).
-2. Clique em **Suspender Trabalhador Ordenado para Mandato de Conselho**.
-   - O status do trabalhador muda para `Em Mandato de Conselho`; o excedente empresarial é recalculado para a força‑de‑trabalho reduzida.
-3. Clique repetidamente em **Aplicar Inflação de Preço (+0,50 %)**.
-   - Cada clique compõe a série de índice de preço e atualiza o subsídio proporcionalmente.
-4. Clique em **Concluir Mandato & Reintegrar (≥ 180 dias)**.
-   - O trabalhador retorna a `Reintegrado com Estabilidade Protegida`, o subsídio é ajustado permanentemente à inflação acumulada e um bloqueio `stability_locked_until` é definido 180 dias à frente.
-5. Clique em **Testar Tentativa de Demissão Pós‑Retorno (Bloquear)**.
-   - O sistema lança `EmploymentStabilityLockError`, registra o bloqueio e impede a demissão prematura.
+### Playbook C — Excedente Cooperativo $1/N$ e Ciclo de Mandato
+1. Abra a **Aba 4 (`Empresa Sem CEO e Retorno Civil`)**, ajuste a **Receita Operacional (`spn_revenue`)** para `220000` e clique em **Executar Partilha Igualitária 1/N (`btn_distribute_profit`)**, confirmando retenção corporativa `$0.00` e transporte exato de frações de centavo.
+2. Percorra os quatro botões do **Ciclo de Mandato** para `CID-0001`: suspensão para serviço em conselho, reajuste de `+0,50%` pelo IPCA, reintegração protegida por $\ge 180$ dias e bloqueio de demissão prematura (`EmploymentStabilityLockError`).
 
-## 3. API Python Programática
+### Playbook D — Comparação Contrafactual Nacional SEEM (`A / B / C`)
+1. Abra a **Aba 6 (`Simulação Nacional — SEEM`)**, ajuste **Anos por Passo (`spn_years_step`)** para `15` e clique em **Avançar**.
+2. Alterne o **Regime Institucional (`cmb_regime`)** entre **(A) CIBERSOC Demárquico**, **(B) Oligarquia Eleitoral** e **(C) Centralismo Burocrático**. Como as três trajetórias compartilham **Números Aleatórios Comuns (CRN)**, as diferenças em IDH, Gini e emprego isolam estritamente o efeito do desenho institucional.
 
-Engenheiros podem conduzir o simulador via scripts Python puros:
+---
+
+## 3. API Programática em Python
+
 ```python
 from decimal import Decimal
 from cibersoc.cybernetics import (
     CompressedSparseRowMatrix,
+    compute_embedded_labour_hours_jacobi,
+    derive_final_demand_from_labour_shares,
     solve_leontief_gross_output_gauss_seidel,
 )
 from cibersoc.enterprise import SocialistEnterprise, WorkerMember
 
-# Construir um pequeno sistema Leontief
-A = CompressedSparseRowMatrix.from_dense([[0.10, 0.20], [0.05, 0.15]])
-final_demand = [120.0, 80.0]
-output = solve_leontief_gross_output_gauss_seidel(A, final_demand)
+matrix_a = CompressedSparseRowMatrix.from_dense([[0.10, 0.20], [0.05, 0.15]])
+labour_h = compute_embedded_labour_hours_jacobi(matrix_a, [0.40, 0.60])
+final_demand = derive_final_demand_from_labour_shares([60.0, 40.0], labour_h, total_labour_budget=200.0)
+gross_output = solve_leontief_gross_output_gauss_seidel(matrix_a, final_demand)
 
-# Criar uma empresa socialista e distribuir lucro
-plant = SocialistEnterprise('EMP‑01', 'Curitiba Precision Optics', 'IND‑OPT')
-plant.register_worker(WorkerMember('W‑01', 'Alice', 'Engenheira de Óptica', Decimal('4800.00'), 30))
-plant.register_worker(WorkerMember('W‑02', 'Bruno', 'Técnico de Montagem', Decimal('4200.00'), 30))
+plant = SocialistEnterprise("EMP-01", "Óptica de Precisão Curitiba", "IND-OPT")
+plant.register_worker(WorkerMember("W-01", "Alice", "Engenheira de Óptica", Decimal("4800.00"), 30))
+plant.register_worker(WorkerMember("W-02", "Bruno", "Técnico de Montagem", Decimal("4200.00"), 30))
 receipt = plant.distribute_period_profit(
-    period_label='2026‑M01',
+    period_label="2026-M01",
     period_total_days=30,
-    gross_revenue=Decimal('35000.00'),
-    audited_material_costs=Decimal('10000.00'),
-    physical_depreciation_reserve=Decimal('2000.00'),
-    macro_social_contribution=Decimal('3000.00'),
-    capital_endowment_equalisation_charge=Decimal('1000.00'),
+    gross_revenue=Decimal("35000.00"),
+    audited_material_costs=Decimal("10000.00"),
+    physical_depreciation_reserve=Decimal("2000.00"),
+    macro_social_contribution=Decimal("3000.00"),
+    capital_endowment_equalisation_charge=Decimal("1000.00"),
 )
-print('Pagamentos por trabalhador:', receipt.payouts)
+print("Pagamentos por trabalhador:", receipt.payouts_by_worker)
 ```
-A API replica exatamente o que a UI faz, mas permite execuções em lote, experimentos e integração com fontes de dados externas.
 
-## 4. Verificação Automatizada & QA com Cobertura 100 %
+---
 
-O repositório inclui uma suíte de testes `pytest` + `pytest‑qt` + `coverage` que garante:
-- **Zero documentação faltante** para cada idioma.
-- **Conformidade Clean‑Code** (sem `TODO`s, pontuação Pylint ≥ 9.5, zero avisos de código morto).
-- **Cobertura completa de instruções e ramos** (`--cov-fail-under=100`).
+## 4. Verificação Automatizada e QA com 100% de Cobertura
+
 ```bash
-QT_QPA_PLATFORM=offscreen .venv/bin/pytest -v \
-    --cov=cibersoc --cov-branch \
+uv run pyright src/cibersoc
+QT_QPA_PLATFORM=offscreen uv run pytest -v \
+    --cov=src/cibersoc --cov-branch \
     --cov-report=term-missing --cov-fail-under=100
 ```
-A suíte também executa a **auditoria de integridade** (`btn_run_audit`) programaticamente para garantir que cada arquivo fonte não contenha comentários ou docstrings, conforme a política Clean‑Code do projeto.
+A suíte impõe `0` erros estáticos de tipos, `100.00%` de cobertura de instruções e ramos, `0` mocks ou monkeypatches, `0` comentários `#` ou docstrings em todos os arquivos `.py` e simetria trilíngue completa.

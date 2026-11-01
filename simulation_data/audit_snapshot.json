@@ -1,7 +1,7 @@
 {
   "project": {
-    "files_scanned": 59,
     "is_self_contained": true,
+    "project_files_scanned": 67,
     "locales": [
       "en-GB",
       "pt",
@@ -10,6 +10,6 @@
   },
   "clean": {
     "is_compliant": true,
-    "files_scanned": 33
+    "files_scanned": 34
   }
 }

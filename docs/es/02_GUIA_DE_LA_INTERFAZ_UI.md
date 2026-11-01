@@ -1,122 +1,93 @@
 # 02. Guía de la Interfaz de Usuario (UI)
 
-## 1. Arquitectura Visual y Sistema de Diseño *Dark Cappuccino*
+## 1. Arquitectura Visual y Sistema de Diseño *Constructivist Espresso* (`DarkCappuccinoPalette`)
 
-La aplicación cliente de **CIBERSOC** ([`CiberSocMainWindow`](../../src/cibersoc/ui/main_window.py)) está construida en **PySide6 (Qt 6.12)** como un instrumento institucional sobrio de control y simulación, libre de frivolidades visuales. Su ergonomía cromática está gobernada por [`DarkCappuccinoPalette`](../../src/cibersoc/ui/theme.py):
+El cliente de escritorio de **CIBERSOC** ([`CiberSocMainWindow`](../../src/cibersoc/ui/main_window.py)) está construido en **PySide6 (Qt 6.12)**. Su ergonomía visual sobria y de baja fatiga está gobernada por `ConstructivistEspressoPalette` (`DarkCappuccinoPalette`) en [`theme.py`](../../src/cibersoc/ui/theme.py):
 
-| Token | Código Hex | Asignación Funcional |
+| Token | Código Hex | Función |
 | :--- | :--- | :--- |
 | `bg_espresso_deep` | `#16110E` | Lienzo estructural profundo de la ventana principal |
-| `bg_roast_panel` | `#1F1814` | Contenedores de área de trabajo, cabecera superior y fondo del lienzo topológico |
-| `bg_moka_card` | `#29201B` | Tablas interactivas, botones, controles numéricos y nodos de consejo no seleccionados |
-| `bg_roast_elevated` | `#362A23` | Pestañas activas, cabeceras de tabla y resaltado del nodo de consejo inspeccionado |
-| `border_warm_roast` | `#4A3930` | Divisores estructurales nítidos de 1px y enlaces inactivos de la malla |
+| `bg_roast_panel` | `#1F1814` | Contenedores de área de trabajo, cabecera superior y fondo topológico |
+| `bg_moka_card` | `#29201B` | Tablas interactivas, botones, controles numéricos y nodos no seleccionados |
+| `bg_roast_elevated` | `#362A23` | Cabeceras de pestañas activas, secciones de tabla y nodo inspeccionado |
+| `border_warm_roast` | `#4A3930` | Divisores estructurales nítidos de 1 px y enlaces inactivos de la malla |
 | `text_ivory_primary` | `#F4EAD8` | Tipografía primaria de alto contraste y telemetría monoespaciada |
-| `text_cream_secondary` | `#D7C5B0` | Subtítulos, métricas secundarias de nodos y etiquetas de pestañas inactivas |
-| `accent_crema_amber` | `#C89B6D` | Bordes activos, títulos de sección y flujos ascendentes de demandas ciudadanas (`↑`) |
-| `accent_sage_ok` | `#84A97C` | Directrices descendentes obligatorias de plebiscitos (`↓`) |
+| `text_cream_secondary` | `#D7C5B0` | Subtítulos, métricas secundarias y etiquetas de pestañas inactivas |
+| `accent_crema_amber` | `#C89B6D` | Bordes activos, títulos de sección y flujos ascendentes ciudadanos (`↑`) |
+| `accent_sage_ok` | `#84A97C` | Directrices descendentes vinculantes (`↓`) y sellos verificados |
 | `accent_terracotta_alert` | `#C26653` | Botones de prueba de salvaguardas constitucionales (`#AlertActionButton`) |
 
-> **Por qué importa:** Las elecciones cromáticas garantizan un índice de contraste mínimo de 4,5:1 (WCAG AA) en todos los monitores compatibles, haciendo la interfaz accesible a usuarios con discapacidad visual moderada.
+> **Estándar de Accesibilidad:** Cada par texto/fondo cumple una relación de contraste mínima de 4,5:1 (WCAG AA), combinada con la tipografía integrada **Atkinson Hyperlegible** y un tamaño mínimo garantizado de **12 pt** en todos los controles.
 
 ---
 
-## 2. Barra Superior Global y Conmutación Nativa de Idioma (`i18n`)
+## 2. Barra Superior Global y Conmutación `i18n` en Vivo
 
-Ubicada en la franja superior de la ventana, la **Cabecera Global** expone elementos permanentes:
-1. **Emblema de las Alas de la Libertad e Identidad del Sistema (`lbl_header_emblem`):** Emblema heráldico-constructivista que fusiona las Alas de la Libertad con engranaje cibernético y grilletes rotos bajo la paleta Dark Cappuccino, reflejando el impulso incesante de emancipación popular y ruptura de muros autocráticos. Constituye también el icono oficial de la aplicación y del Dock de macOS.
-2. **Selector Instantáneo de Idioma (`cmb_language`):** Admite conmutación fluida entre **Inglés Británico (`English (UK) — en-GB`)**, **Portugués (`Português — pt`)** y **Español (`Español — es`)**.
-   * Seleccionar un nuevo idioma invoca [`LocalizationCatalog.switch_locale`](../../src/cibersoc/i18n/translator.py), retraduciendo al instante **cada widget, título de pestaña, cabecera y celda de tabla, etiqueta del lienzo topológico, carta arquitectónica y evento histórico de la consola de auditoría** sin reiniciar el estado de la simulación.
-3. **Controles de Escala Tipográfica (`A-`, `A+`, `Aa`):** Ajuste dinámico de fuente (mínimo de 12 pt, atajos `Ctrl++`, `Ctrl+-`, `Ctrl+0`).
-4. **Insignia del Ciclo Demárquico Activo (`lbl_cycle_badge`):** Indica el ciclo de sorteo vigente (`CICLO DEMÁRQUICO #01`, `#02`, etc.).
-
-> **Consejo:** El selector de idioma es accesible por teclado (`Alt+L`). Pulsar `Enter` tras la selección dispara la traducción de forma síncrona.
+Controles permanentes en la franja superior de la ventana principal:
+1. **Emblema Alas de la Libertad e Identidad del Sistema (`lbl_header_emblem`):** Emblema vectorial multirresolución que fusiona alas geométricas, engranaje cibernético industrial y cadenas rotas; define asimismo el icono de ventana y del Dock de macOS.
+2. **Selector Instantáneo de Idioma (`cmb_language`):** Conmuta al instante entre **English (UK) — `en-GB`**, **Português — `pt`** y **Español — `es`** mediante `LocalizationCatalog.switch_locale`, retraduciendo cada widget, celda de tabla, nodo del lienzo, axioma de la Carta y evento de auditoría sin reiniciar el estado.
+3. **Controles de Escala Tipográfica (`A-`, `A+`, `Aa`):** Escalado dinámico entre **12 pt** y **32 pt** (`Ctrl++`, `Ctrl+-`, `Ctrl+0`) con persistencia de sesión.
+4. **Botón de Atajos de Teclado (`?` / `F1`):** Abre un cuadro de referencia localizado con todos los atajos activos.
+5. **Insignia del Ciclo Demárquico Activo (`lbl_cycle_badge`):** Muestra el ciclo de sorteo vigente (`CICLO DEMÁRQUICO #01`, `#02`, …).
 
 ---
 
-## 3. Navegación por las Seis Áreas Operativas de Trabajo
+## 3. Seis Áreas Operativas Integradas (Pestañas)
 
 ### 3.1 Malla Federada y Ministerios (`tabs.councils`)
-* **Panel Izquierdo — Malla Escalonada Interactiva de Consejos ([`CouncilMeshCanvas`](../../src/cibersoc/ui/mesh_canvas.py)):**
-  * Renderiza en tiempo real los 4 niveles federados: **Consejo Federal de Brasil** (arriba), **Consejo Estatal de Paraná**, **Consejo Municipal de Curitiba** y los dos consejos barriales de base (**Consejo Sectorial Boqueirão** y **Consejo Sectorial Matriz**).
-  * **Selección de Consejo:** Haga clic directamente sobre cualquier bloque rectangular del lienzo *o* utilice el selector **Inspeccionar Nivel de Consejo (`cmb_council`)**. Ambos controles permanecen sincronizados bidireccionalmente.
-  * **Canales Direccionales Vivos:** Las líneas continuas ámbar-crema a la izquierda (`↑`) se iluminan cuando las demandas vecinales ascienden por la malla; las líneas discontinuas verde salvia a la derecha (`↓`) se iluminan cuando las directrices macroeconómicas obligatorias descienden a todos los Consejos.
-  * **Escalar Demanda Vecinal (`btn_escalate_demand`):** Despacha una demanda concreta de salud/transporte desde `CONS-SET-BOQUEIRAO` a través de `Municipal -> Estatal -> Federal`, actualizando los contadores ascendentes (`↑Dem`).
-* **Panel Derecho — Resolución Granular de Funciones:**
-  * **Cuadro del Secretario General (`grp_secretary`):** Muestra matrícula, estrato de origen, peso unitario de voto (`1`) y ausencia explícita de veto o decreto. Ofrece **Ordenar Agenda y Autenticar Mayoría (`btn_sg_authenticate`)** y **Probar Intento de Veto/Decreto Autocrático (`btn_sg_veto_test`)**.
-  * **Panel de Proporcionalidad Matemática (`lbl_council_proportionality`):** Presenta la justificación lógica rigurosa y métricas analíticas de escaños del consejo (ej.: Consejo Municipal de Curitiba con 20 escaños, estrictamente proporcional 1:1 a la suma de 20 miembros de los consejos sectoriales dependientes Boqueirão [10] y Matriz [10], asegurando 4 integrantes en Justicia para el Jurado Popular sin saturar la cuarentena muestral).
-  * **Tabla de Cámaras Equivalentes a Ministerios (`tbl_ministries`):** Enumera cada [`MinistryPortfolio`](../../src/cibersoc/sortition.py) del Consejo seleccionado, su consejero relator sorteado, condición cívica (`Civil Sorteado` vs `Militar Técnico`) y dotación de la cámara. Observe que el `Ministerio de Defensa y Ejército Nacional` aparece exclusivamente al inspeccionar el Consejo Federal y es 100% civil.
-  * **Cuadro de Mando del Ministerio de Defensa (`grp_defence`):** Permite emitir una **Orden Civil Multifirma (`btn_defence_order`)** o probar el **Bloqueo de Movilización Autónoma de General (`btn_defence_block`)**.
+- **Panel Izquierdo — Malla Escalonada Interactiva (`CouncilMeshCanvas`):** Topología de 4 niveles (`Federal → Estatal → Municipal → Sectorial`) con nodos seleccionables, selector sincronizado (`cmb_council`), escalado de demandas (`btn_escalate_demand`, `↑`) y canales descendentes de directrices (`↓`).
+- **Panel Derecho — Resolución Granular de Funciones y Cámaras:**
+  - **Cuadro del Secretario General (`grp_secretary`):** Muestra matrícula sorteada, estrato, peso unitario de voto (`1`), cero poder de veto/decreto, autenticación de mayoría (`btn_sg_authenticate`) y bloqueo autocrático (`btn_sg_veto_test`).
+  - **Panel de Proporcionalidad Matemática (`lbl_council_proportionality`):** Expone las razones exactas de escaños (p. ej., Consejo Municipal de Curitiba con `20` escaños estrictamente proporcionales $1:1$ a los consejos sectoriales Boqueirão `[10]` + Matriz `[10]`).
+  - **Tabla de Cámaras Equivalentes a Ministerios (`tbl_ministries`):** Enumera cada `MinistryPortfolio`, relator sorteado, condición civil vs. militar y dotación.
+  - **Jurado Popular y Supervisión de Seguridad Pública (`grp_jury_security`):** Adjudica causas en bancada ciudadana impar con rotación determinista de suplente por expediente (`btn_jury_adjudicate`), bloquea sustitución por juez profesional (`btn_jury_block`), despacha patrulla vinculada a orden civil (`btn_security_dispatch`) y bloquea coerción unilateral (`btn_security_block`).
+  - **Compuerta Civil del Ministerio de Defensa (`grp_defence`):** Emite órdenes civiles multifirma (`btn_defence_order`) y bloquea movilizaciones unilaterales de generales (`btn_defence_block`).
 
-### 3.2 Sorteo y Cuarentena (`tabs.sortition`)
-* **Resumen de Control (`lbl_sortition_summary`):** Muestra ciclo activo, padrón total (`320` en jurisdicciones federadas), consejeros en ejercicio (`76` en los 5 consejos), exconsejeros bloqueados en cuarentena y reelección consecutiva (`0` invariante).
-* **Ejecutar Siguiente Ciclo de Sorteo (`btn_next_cycle`):** Concluye los mandatos vigentes, ingresa a los consejeros salientes en cuarentena obligatoria fuera de la urna, sortea nuevos consejos vía `Commit-Reveal SHA-256` y verifica todas las pruebas.
-* **Probar Registro de Candidatura Partidaria (`btn_block_election`):** Dispara [`ElectoralOperationForbiddenError`](../../src/cibersoc/sortition.py) y registra el bloqueo constitucional.
-* **Tabla de Pruebas Criptográficas (`tbl_proofs`):** Muestra `Merkle Root`, `Cuotas Estratificadas de Hamilton` e insignia de verificación `SHA-256` de cada Consejo.
+### 3.2 Sorteo, Cuarentena y Habilitación Cívica (`tabs.sortition`)
+- **Resumen de Control (`lbl_sortition_summary`):** Muestra ciclo activo, padrón local (`320`), consejeros en ejercicio (`76` en los 5 consejos), exconsejeros en cuarentena y reelección consecutiva (`0` invariante).
+- **Acciones de Sorteo y Snapshot:** Ejecuta el siguiente ciclo `Commit-Reveal SHA-256` (`btn_next_cycle`), prueba el bloqueo constitucional de candidatura partidaria (`btn_block_election` -> `ElectoralOperationForbiddenError`) o guarda un snapshot determinista (`btn_save_checkpoint`) en `simulation_data/checkpoints/`.
+- **Planificador de Exámenes de Habilitación Cívica (`grp_civic_enablement`):** Registra la cualificación periódica en las 4 materias troncales (`btn_civic_round`), aplicando exención estatutaria automática desde los 60 años y habilitación para auditoría técnica (`>= 70%`).
+- **Tabla de Pruebas Criptográficas (`tbl_proofs`):** Muestra raíz de Merkle SHA-256, cuotas de Hamilton por estrato y sello `VERIFICADO (SHA-256)`.
 
 ### 3.3 Macroasignación Cibernética (`tabs.cybernetics`)
-* **Controles de Papeletas (`spn_votes_edu`, `spn_votes_health`) y Botón de Escrutinio (`btn_run_plebiscite`):** Parametrizan el recuento de papeletas anónimas entre `+5% Educación Pública` vs `+5% Salud Pública`, resuelven la producción bruta de Leontief y la Armonía de corto plazo de Cockshott y difunden la directriz vinculante.
-* **Botones de Salvaguarda Constitucional:** **Probar Nombre de Candidato en Papeleta (`btn_block_person_pleb`)** y **Simular Desviación Presupuestaria del Consejo (`btn_block_council_override`)** prueban el bloqueo inmediato frente a temas electorales personalizados o desviaciones burocráticas.
-* **Tabla de Matriz Insumo-Producto (`tbl_cyber`):** Expone cuota votada (`%`), demanda final $y^*$, producción bruta $x = (\mathbf{I}-\mathbf{A})^{-1}y^*$, trabajo incorporado $H$ e índice de Armonía a corto plazo por sector.
+- **Controles de Papeletas (`spn_votes_edu`, `spn_votes_health`) y Escrutinio (`btn_run_plebiscite`):** Ejecuta un plebiscito anónimo resistente a coacción, deriva la demanda final física a partir de cuotas exactas de trabajo incorporado ($s_j = 100 \cdot H_j y_j^* / \sum_k H_k y_k^*$), resuelve producción bruta CSR de Leontief, aplica Armonía a corto plazo de Cockshott y difunde la directriz vinculante.
+- **Ajuste Iterativo del Plan y Frontera Ecológica de Carbono (`grp_cyber_feedback`):** Simula retroalimentación de vaciado (`spn_clearing_ratio`) y cumplimiento del techo físico de carbono (`spn_carbon_budget`, `btn_iterate_plan`).
+- **Salvaguardas Constitucionales:** Bloquea nombres de candidatos en papeleta (`btn_block_person_pleb`) y desviaciones presupuestarias de consejos (`btn_block_council_override`).
+- **Tabla de Matriz Insumo-Producto (`tbl_cyber`):** Expone cuota de trabajo votada (`%`), demanda final $y^*$, producción bruta $x$, trabajo incorporado de Jacobi $H$ y Armonía por sector.
 
 ### 3.4 Empresa Sin CEO y Retorno Civil (`tabs.enterprise`)
-* **Panel Izquierdo — Libro Mayor de la Empresa Socialista (`grp_enterprise_ledger`):**
-  * Ajuste los **Ingresos Operativos del Período (`spn_revenue`)** y pulse **Ejecutar Reparto Igualitario 1/N (`btn_distribute_profit`)** para recalcular cuotas exactas en coma fija por trabajador, retención corporativa cero (`$ 0.00`) y remanente indivisible de centavos.
-  * **Tabla de Trabajadores (`tbl_workers`):** Enumera estado laboral (`Activo en Producción`, `En Mandato de Consejo` o `Reincorporado con Estabilidad`), sueldo base mensual y cuota igualitaria de excedente.
-  * **Probar Nombramiento de CEO (`btn_block_ceo`):** Demuestra el rechazo inmediato de cargos ejecutivos jerárquicos.
-* **Panel Derecho — Ciclo de Mandato del Ciudadano Sorteado (`grp_mandate_lifecycle`):**
-  * Cuatro botones secuenciales guían al trabajador monitorizado (`CID-0001`) por: **(1) Suspensión por Mandato**, **(2) Ajuste Inflacionario de `+0,50%`**, **(3) Reincorporación al Puesto con Bloqueo $\ge 180$ Días** y **(4) Bloqueo de Despido Tras Retorno**.
+- **Panel Izquierdo — Libro Mayor de la Empresa Cooperativa (`grp_enterprise_ledger`):** Ajusta los Ingresos Operativos del Período (`spn_revenue`) y calcula cuotas racionales exactas $1/N$ por días enteros (`btn_distribute_profit`) vía `Decimal` y `math.gcd`, manteniendo el beneficio retenido corporativo idénticamente en `$0.00`. Intentar nombrar un CEO (`btn_block_ceo`) lanza `OrganisationalViolationError`.
+- **Panel Derecho — Ciclo de Mandato del Ciudadano Sorteado (`grp_mandate_lifecycle`):** Guía a `CID-0001` por (1) Suspensión por Mandato, (2) Indexación de Estipendio por IPC (`+0,50%`), (3) Reincorporación Protegida ($\ge 180$ días) y (4) Bloqueo de Despido Tras Retorno (`EmploymentStabilityLockError`).
 
-### 3.5 Axiomas Arquitectónicos e Integridad (`tabs.charter`)
-* Muestra la Carta Arquitectónica autónoma de CIBERSOC y sus 7 axiomas estructurales en el idioma activo. Al pulsar **Ejecutar Escaneo Completo de Clean Code, Documentación Trilingüe e Integridad (`btn_run_audit`)**, inspecciona todos los archivos de `cibersoc`, confirmando `0` manuales faltantes en `en-GB`, `pt` y `es` y conformidad `True` de Clean Code sin comentarios.
+### 3.5 Axiomas, Integridad y Documentación (`tabs.charter_docs`)
+- **Carta Arquitectónica y Escáner de Integridad (`grp_charter`):** Presenta los 7 axiomas estructurales traducidos, exporta arte FullHD localizado del emblema (`btn_export_fullhd_wallpaper`) y ejecuta `btn_run_audit`, verificando 0 comentarios `#` y 0 docstrings en todos los archivos `.py` (`tokenize` + `ast.parse`) y paridad documental trilingüe íntegra.
+- **Visor de README y Documentación del Sistema (`grp_readme`):** Visor nativo Markdown con renderizado estilizado de **diagramas Mermaid** (`QTextBrowser`), selector instantáneo (`cmb_doc_selector`), navegación por enlaces relativos, retorno rápido (`btn_open_readme`) y escala tipográfica hasta 32 pt.
 
-### 3.6 README y Documentación del Sistema (`tabs.readme`)
-* Visualizador nativo integrado (`QTextBrowser` con soporte completo de Markdown) para leer `README.md` y todos los manuales técnicos sin abandonar la interfaz de escritorio.
-* **Selector de Documentos (`cmb_doc_selector`):** Permite navegar al instante entre el `README.md` y los 4 manuales técnicos en la carpeta `docs/` en el idioma activo (01. Fundamentos Teóricos, 02. Guía de la UI, 03. Manual del Simulador, 04. Mecánica Subyacente).
-* **Hiperenlaces Interactivos:** Al hacer clic en cualquier enlace relativo de Markdown en el texto, el visor carga de inmediato el documento de destino y sincroniza el selector.
-* **Botón de Retorno Rápido (`btn_open_readme`):** Restaura en un clic la vista del `README.md`.
-* **Escala Tipográfica Responsiva:** El texto de la documentación responde dinámicamente al tamaño de fuente seleccionado (mínimo de 12 pt hasta 32 pt).
-
-### 3.7 Simulación Nacional — Motor SEEM (`tabs.simulation`)
-* **Años por paso (`spn_years_step`):** Avanza tantos años como elija en un clic (de 1 a 1000). **No hay límite total**: la simulación continúa todo el tiempo que desee, hasta que pulse *Reiniciar Simulación*.
-* **Cómo leer el mapa 3D** (panel plegable *Cómo leer este mapa*, disponible en los tres idiomas):
-  * **Torres = IDH.** Una torre por estado; la altura y el color (rojo → dorado → verde) muestran el IDH.
-  * **Anillos en el suelo = población.** El tamaño del anillo es proporcional al número de habitantes del estado. Los anillos son fijos.
-  * **Partículas en órbita = ciudadanos (simbólico).** Cada estado recibe el mismo número de puntos, así que **no** miden la población y un punto no es una persona.
-* **Glosario mostrado en el panel:**
-  * **Población:** todas las personas que viven en un estado (anillo) o en todo el país (panel superior izquierdo).
-  * **Ciudadanos:** habitantes que pueden ser sorteados para gobernar; se sortea uno por cartera cada año y nadie sirve dos veces. El panel muestra cuántos ya fueron sorteados.
-  * **IDH (Índice de Desarrollo Humano):** nota de 0 a 1 que combina salud, educación e ingresos; cuanto mayor, mejor.
-  * **GINI:** desigualdad de ingresos de 0 (todos ganan lo mismo) a 1 (una sola persona concentra todo); cuanto menor, mejor.
-  * **Empleo:** proporción de la fuerza laboral que tiene trabajo.
+### 3.6 Simulación Nacional — Motor 3D SEEM (`tabs.simulation`)
+- **Escala Nacional y Topología Continental:** Simula **150.700.000 habitantes** distribuidos en 10 polos macrorregionales brasileños sobre una silueta vectorial continental con arcos 3D Bézier de flujos insumo-producto interregionales, torres de IDH, anillos poblacionales y consejeros regionales con cuarentena posmandato (`70` activos/año en 7 carteras × 10 polos).
+- **Comparador de Regímenes Institucionales (`cmb_regime`):** Evalúa tres regímenes bajo **Números Aleatorios Comunes (CRN)** (idéntica secuencia de choques exógenos): **(A) CIBERSOC (Demarquía + Cibernética + 1/N)**, **(B) Oligarquía Electoral (Mercado + Partidos)** y **(C) Centralismo Burocrático (Estado de Mando)**, mostrando diferenciales en tiempo real (`ΔIDH`, `ΔGini`) y exportando trayectorias CSV/JSON.
 
 ---
 
-## 4. Consola Persistente de Rastro de Auditoría (`grp_audit_console`)
+## 4. Consola Persistente de Auditoría y Diseño Responsivo
 
-Anclada en el borde inferior de todas las áreas operativas, la consola monoespaciada de solo lectura presenta los 25 registros [`LocalizedAuditEvent`](../../src/cibersoc/ui/state.py) más recientes. Cada paso simulado y bloqueo constitucional añade una entrada determinista que se vuelve a renderizar automáticamente al cambiar de idioma.
-
----
-
-## 5. Arquitectura Responsiva Multipantalla (`ResponsiveLayoutMode`)
-
-`CiberSocMainWindow` y `CouncilMeshCanvas` se adaptan dinámicamente desde pantallas compactas (`680x500`) hasta monitores de ultraalta definición (`2560x1440`+):
-* **Reorganización por Punto de Corte (`< 960px` `COMPACT` vs `>= 960px` `EXPANDED`):** Por debajo de `960px`, los divisores `QSplitter` de doble panel (`splitter_councils`, `splitter_enterprise`) pasan a apilamiento vertical, las filas de acción `QBoxLayout` fluyen de arriba abajo y las cabeceras de `QTableWidget` adoptan `ResizeToContents` con desplazamiento suave por píxel. Desde `960px` en adelante, los paneles se expanden horizontalmente con columnas en modo `Stretch`.
-* **Áreas de Trabajo en `QScrollArea` y Divisor Vertical Proporcional:** Cada pestaña operativa se aloja dentro de un `QScrollArea` sin marco (`widgetResizable = True`) junto con `main_vertical_splitter`, evitando desbordamientos horizontales o recortes verticales en ventanas reducidas.
-* **Escalado Dinámico de `CouncilMeshCanvas`:** Los rectángulos de nodos, conectores direccionales y leyendas superiores escalan matemáticamente según las dimensiones reales del widget con elisión tipográfica (`QFontMetrics.elidedText`), garantizando cero colisiones geométricas en cualquier tamaño de ventana.
+- **Consola de Auditoría (`grp_audit_console`):** Anclada en la base de la ventana en todas las pestañas, mostrando los 25 registros `LocalizedAuditEvent` más recientes retraducidos al cambiar de idioma.
+- **Punto de Corte Adaptativo (`< 960 px` `COMPACT` vs. `>= 960 px` `EXPANDED`):** Apila divisores y barras de acción verticalmente en pantallas estrechas, garantizando cero desbordamiento horizontal hasta `680×500`.
 
 ---
 
-## 6. Atajos Rápidos para Usuarios Avanzados
+## 5. Referencia de Atajos de Teclado
 
-| Acción | Atajo | Efecto |
-|---|---|---|
-| Abrir selector de idioma | `Alt+L` | Conmutación instantánea de idioma |
-| Escalar demanda vecinal aleatoria | `Ctrl+E` | Envía una demanda a través de la malla |
-| Actualizar malla tras sorteo | `Ctrl+R` | Redibuja el grafo de consejos |
-| Ejecutar auditoría completa | `Ctrl+Shift+A` | Ejecuta verificación de Clean Code, documentación e integridad |
-| Guardar checkpoint (automático al cerrar) | – | Cerrar la ventana principal dispara `closeEvent` → escribe `population.json`, `mesh.json`, `audit_snapshot.json` en una carpeta con marca de tiempo bajo `simulation_data/checkpoints/` |
-
----
-
-*Todos los elementos de la interfaz son completamente navegables por teclado y exponen nombres accesibles para lectores de pantalla mediante la propiedad `accessibleName` de Qt.*
+| Atajo | Ámbito | Acción |
+| :--- | :--- | :--- |
+| `F1` o `?` | Global | Abrir diálogo localizado de Atajos de Teclado |
+| `Ctrl+1` … `Ctrl+6` | Global | Cambiar directamente a la Pestaña 1 … 6 |
+| `Ctrl++` / `Ctrl+=` | Global | Aumentar tamaño de fuente (`A+`, hasta 32 pt) |
+| `Ctrl+-` | Global | Reducir tamaño de fuente (`A-`, mínimo 12 pt) |
+| `Ctrl+0` | Global | Restablecer tamaño de fuente predeterminado (`Aa`) |
+| `F11` | Global | Alternar modo de pantalla completa (*fullscreen*) |
+| `Alt+Up` / `Alt+Down` | Global | Recorrer el consejo inspeccionado en la malla federativa de 4 niveles |
+| `Space` | Pestaña 6 (SEEM) | Iniciar / Pausar simulación anual continua |
+| `Right` | Pestaña 6 (SEEM) | Avanzar simulación según los años en `spn_years_step` |
+| `R` | Pestaña 6 (SEEM) | Reiniciar simulación SEEM al Año 2026 |
+| `+` / `-` | Pestaña 6 (SEEM) | Acercar / Alejar cámara 3D |

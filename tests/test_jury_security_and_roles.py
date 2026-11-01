@@ -364,12 +364,16 @@ def test_cockshott_critique_responses_and_cybernetic_mechanisms() -> None:
     assert orch_eco.is_within_planetary_boundary is True
 
 
-def test_export_fullhd_wallpaper_button_and_banner_in_main_window(qtbot) -> None:
+def test_export_fullhd_wallpaper_button_and_banner_in_main_window(qtbot, tmp_path: Path) -> None:
+    from cibersoc.councils import AgendaItem, SecretaryGeneral
     from cibersoc.ui.main_window import CiberSocMainWindow
     from cibersoc.i18n.translator import LocalizationCatalog, SupportedLocale
     from PySide6.QtGui import QShowEvent
 
-    window = CiberSocMainWindow(translator=LocalizationCatalog(SupportedLocale.ENGLISH_UK))
+    window = CiberSocMainWindow(
+        translator=LocalizationCatalog(SupportedLocale.ENGLISH_UK),
+        checkpoint_data_root=tmp_path,
+    )
     qtbot.addWidget(window)
     window.showEvent(QShowEvent())
     assert window.lbl_charter_emblem_art.pixmap() is not None
@@ -382,11 +386,87 @@ def test_export_fullhd_wallpaper_button_and_banner_in_main_window(qtbot) -> None
     assert len(exported_events) >= 1
 
     window.cmb_language.setCurrentIndex(window.cmb_language.findData("pt"))
-    assert window.lbl_system_title.text() == "CIBERSOC // SISTEMA SOCIALISTA CIBERNÉTICO E DEMÁRQUICO"
+    assert window.lbl_system_title.text() == "CIBERSOC // ARQUITETURA DE GOVERNANÇA CIBERNÉTICA E DEMÁRQUICA"
     window.cmb_language.setCurrentIndex(window.cmb_language.findData("es"))
-    assert window.lbl_system_title.text() == "CIBERSOC // SISTEMA SOCIALISTA CIBERNÉTICO Y DEMÁRQUICO"
+    assert window.lbl_system_title.text() == "CIBERSOC // ARQUITECTURA DE GOBERNANZA CIBERNÉTICA Y DEMÁRQUICA"
     window.cmb_language.setCurrentIndex(window.cmb_language.findData("en-GB"))
-    assert window.lbl_system_title.text() == "CIBERSOC // CYBERNETIC AND DEMARCHIC SOCIALIST SYSTEM"
+    assert window.lbl_system_title.text() == "CIBERSOC // CYBERNETIC AND DEMARCHIC GOVERNANCE ARCHITECTURE"
+
+    window.btn_jury_adjudicate.click()
+    window.btn_jury_block.click()
+    window.btn_security_dispatch.click()
+    window.btn_security_block.click()
+    assert len(window.orchestrator.mesh.get_council(window._selected_council_id()).jury_verdicts) >= 1
+    assert len(window.orchestrator.mesh.get_council(window._selected_council_id()).security_dispatches) >= 1
+
+    window.btn_save_checkpoint.click()
+    assert "ui_snapshot" in window.orchestrator.available_checkpoints(data_root=tmp_path)
+    window.btn_run_audit.click()
+    window.btn_save_checkpoint.click()
+
+    window.btn_civic_round.click()
+    window.btn_civic_round.click()
+    assert window.orchestrator.civic_enablement_summary()["pending_enablement"] == 0
+
+    shares = window.orchestrator.embedded_labour_shares_for_directive()
+    assert sum(shares.values()) == pytest.approx(100.0)
+
+    for ratio, cap in ((1.00, 450.0), (1.25, 450.0), (0.80, 10.0)):
+        window.spn_clearing_ratio.setValue(ratio)
+        window.spn_carbon_budget.setValue(cap)
+        window.btn_iterate_plan.click()
+    assert window.orchestrator.last_ecological_audit is not None
+    assert window.orchestrator.last_ecological_audit.is_within_planetary_boundary is False
+
+    window._toggle_fullscreen()
+    window._toggle_fullscreen()
+    window._step_council_selection(1)
+    window._step_council_selection(-1)
+    window.tabs.setCurrentIndex(0)
+    window._zoom_3d_if_active(True)
+    window.tabs.setCurrentIndex(5)
+    window._zoom_3d_if_active(True)
+    window._zoom_3d_if_active(False)
+
+    fed = window.orchestrator.mesh.get_council("CONS-FED-BRASIL")
+    even_council = replace(
+        fed,
+        portfolios={**fed.portfolios, MinistryPortfolio.JUSTICE: list(fed.members[:4])},
+    )
+    bench_default = even_council.active_popular_jury_bench()
+    case_rot = PopularJuryCase("JURI-ROT-99", "Rotation audit", even_council.council_id)
+    bench_case = even_council.active_popular_jury_bench(case_id=case_rot.case_id)
+    assert len(bench_case) == 3
+    verdict_default = even_council.adjudicate_by_popular_jury(
+        case_rot, {m.citizen_id: True for m in bench_default}
+    )
+    assert verdict_default.is_liability_upheld is True
+    case_rot_2 = PopularJuryCase("JURI-ROT-100", "Rotation audit 2", even_council.council_id)
+    bench_case_2 = even_council.active_popular_jury_bench(case_id=case_rot_2.case_id)
+    verdict_case = even_council.adjudicate_by_popular_jury(
+        case_rot_2, {m.citizen_id: False for m in bench_case_2}
+    )
+    assert verdict_case.is_liability_upheld is False
+
+    weighted_sg = SecretaryGeneral(
+        profile=fed.secretary_general.profile,
+        council_id=fed.council_id,
+        tier=fed.tier,
+    )
+    weighted_sg.voting_weight = 2
+    agenda = AgendaItem("AG-1", "Item", MinistryPortfolio.ECONOMY, 3, fed.council_id, 1)
+    ballots = {m.citizen_id: True for m in fed.members}
+    with pytest.raises(AutocraticActForbiddenError, match="voting_weight"):
+        weighted_sg.authenticate_resolution("RES-ERR", agenda, "Err", ballots, fed.member_ids)
+
+    dissent_ballots = {
+        m.citizen_id: (m.citizen_id != fed.secretary_general.profile.citizen_id)
+        for m in fed.members
+    }
+    res_dissent = fed.secretary_general.authenticate_resolution(
+        "RES-OK", agenda, "SG voted against", dissent_ballots, fed.member_ids
+    )
+    assert res_dissent.votes_in_favour > res_dissent.votes_against
 
 
 

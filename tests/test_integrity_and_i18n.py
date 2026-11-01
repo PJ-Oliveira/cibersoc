@@ -78,9 +78,11 @@ def test_real_cibersoc_clean_code_and_standalone_integrity() -> None:
 def test_zero_mocks_in_entire_test_suite() -> None:
     tests_directory = Path(__file__).resolve().parent
     forbidden_mock_names = {"mock", "unittest.mock", "MagicMock", "AsyncMock", "NonCallableMock", "monkeypatch"}
+    forbidden_patch_targets = {"QFileDialog", "QDesktopServices", "QDialog", "loader_module", "sv"}
     violations: list[str] = []
 
-    for test_file in sorted(tests_directory.glob("test_*.py")):
+    python_test_files = sorted(tests_directory.glob("*.py"))
+    for test_file in python_test_files:
         tree = ast.parse(test_file.read_text(encoding="utf-8"), filename=test_file.name)
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
@@ -98,6 +100,14 @@ def test_zero_mocks_in_entire_test_suite() -> None:
                 for arg in node.args.args:
                     if arg.arg in forbidden_mock_names:
                         violations.append(f"{test_file.name}:{node.name}:arg:{arg.arg}")
+            elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "setattr":
+                if node.args and isinstance(node.args[0], ast.Name) and node.args[0].id in forbidden_patch_targets:
+                    violations.append(f"{test_file.name}:setattr:{node.args[0].id}")
+            elif isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Attribute) and isinstance(target.value, ast.Name):
+                        if target.value.id in forbidden_patch_targets:
+                            violations.append(f"{test_file.name}:assign:{target.value.id}.{target.attr}")
 
     assert violations == []
 
@@ -129,7 +139,7 @@ def test_analytical_vocabulary_and_standalone_purity() -> None:
             continue
         if not path.is_file() or path.name in excluded_files:
             continue
-        if path.suffix.lower() not in {".py", ".md", ".json", ".toml", ".txt", ""}:
+        if path.suffix.lower() not in {".py", ".md", ".json", ".toml", ".txt", ".html", ""}:
             continue
         if pattern.search(path.name):
             offending_locations.append(f"filename:{path.relative_to(cibersoc_root)}")

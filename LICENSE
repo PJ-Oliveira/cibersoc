@@ -1,7 +1,39 @@
-CIBERSOC OPEN CIVIC ARCHITECTURE DECLARATION (v2.0)
+MIT License
 
-[en-GB] All source code, mathematical specifications, user interfaces and technical manuals contained in the CIBERSOC project are released irrevocably into the global civic commons without copyright claims or proprietary restrictions. Any community, researcher or public institution may audit, execute, adapt and redistribute this work freely.
+Copyright (c) 2026 Paulo Oliveira (PJ-Oliveira) and CIBERSOC Contributors
 
-[pt] Todo o código-fonte, especificações matemáticas, interfaces gráficas e manuais técnicos integrantes do projeto CIBERSOC são disponibilizados de forma irrevogável ao patrimônio cívico aberto, sem reivindicações autorais ou restrições proprietárias. Qualquer coletividade, pesquisador ou instituição pública pode auditar, executar, adaptar e redistribuir livremente esta obra.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-[es] Todo el código fuente, las especificaciones matemáticas, las interfaces gráficas y los manuales técnicos que integran el proyecto CIBERSOC se liberan de forma irrevocable al patrimonio cívico común, sin reclamaciones de derechos de autor ni restricciones propietarias. Cualquier comunidad, investigador o institución pública puede auditar, ejecutar, adaptar y redistribuir libremente esta obra.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-------------------------------------------------------------------------------
+CIBERSOC OPEN CIVIC & SCIENTIFIC ARCHITECTURE NOTICE (v2.1)
+
+[en-GB] All source code, mathematical specifications, user interfaces, and
+technical manuals in CIBERSOC are released under the OSI-approved MIT License
+for unrestricted academic research, institutional simulation, public auditing,
+adaptation, and redistribution.
+
+[pt] Todo o código-fonte, especificações matemáticas, interfaces gráficas e
+manuais técnicos do CIBERSOC são disponibilizados sob a Licença MIT aprovada
+pela OSI para pesquisa acadêmica irrestrita, simulação institucional, auditoria
+pública, adaptação e redistribuição.
+
+[es] Todo el código fuente, las especificaciones matemáticas, las interfaces
+gráficas y los manuales técnicos de CIBERSOC se publican bajo la Licencia MIT
+aprobada por la OSI para investigación académica sin restricciones, simulación
+institucional, auditoría pública, adaptación y redistribución.

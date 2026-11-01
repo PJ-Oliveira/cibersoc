@@ -1,103 +1,81 @@
 # 04. Under the Hood Mechanics
 
-## 1. End‑to‑End Subsystem Data Flow (Mermaid Diagram)
+## 1. End-to-End Subsystem Data Flow (Mermaid Diagram)
+
 ```mermaid
 flowchart TD
-    Pop["Citizen Registry (CitizenProfile)"] --> Elig["Eligibility & Quarantine Filter (StratifiedSortitionEngine)"]
-    Beacon["Multi‑Source Entropy (CommitRevealEntropyBeacon)"] --> Seed["Domain‑Separated Master Seed (SHA‑256)"]
-    Elig --> Merkle["Eligible Pool Merkle Root (SHA‑256)"]
+    Pop["Citizen Registry (CitizenProfile)"] --> Elig["Eligibility, Quarantine & Civic Exam (StratifiedSortitionEngine)"]
+    Beacon["Multi-Source Entropy (CommitRevealEntropyBeacon)"] --> Seed["Domain-Separated Master Seed (SHA-256)"]
+    Elig --> Merkle["Eligible Pool Merkle Root (SHA-256)"]
     Merkle --> Seed
-    Seed --> DRBG["Unbiased Counter‑Mode HMAC‑SHA256 DRBG"]
-    Elig --> Hamilton["Largest‑Remainder Hamilton Quotas"]
+    Seed --> DRBG["Unbiased Counter-Mode HMAC-SHA256 DRBG"]
+    Elig --> Hamilton["Largest-Remainder Hamilton Quotas"]
     Hamilton --> DRBG
-    DRBG --> Mesh["4‑Tier Escalated Council Mesh (Sectoral ↔ Municipal ↔ State ↔ Federal)"]
-    DRBG --> Roles["Sub‑Sorted Secretary‑General & Ministry Chambers (Defence = 100% Civilian)"]
-    Pleb["Closed Macroeconomic Plebiscite (Anonymous Blinded Ballots)"] --> CSR["CSR Leontief & Jacobi Labour Solvers + Cockshott Harmony"]
-    CSR --> Directive["Compulsory Allocation Directive (Broadcast to All Councils)"]
+    DRBG --> Mesh["4-Tier Escalated Council Mesh & Popular Jury Rotation"]
+    DRBG --> Roles["Sub-Sorted Secretary-General & Chambers (Defence = 100% Civilian)"]
+    Pleb["Closed Macroeconomic Plebiscite (Blinded Ballots)"] --> CSR["CSR Leontief, Jacobi Labour Shares & Cockshott Harmony"]
+    CSR --> Directive["Compulsory Allocation Directive + Carbon Feedback"]
     Directive --> Mesh
-    Ent["SocialistEnterprise (Property Bitmask 8, Zero CEOs)"] --> GCD["GCD Integer‑Day Rational 1/N Surplus Split"]
-    Mandate["MandateProtectionManager (CPI Parity & ≥180‑Day Lock)"] <--> Ent
+    Ent["SocialistEnterprise (Bitmask 8, Zero CEOs)"] --> GCD["GCD Integer-Day Rational 1/N Surplus Split"]
+    Mandate["MandateProtectionManager (CPI Parity & >=180-Day Lock)"] <--> Ent
+    SEEM["NationalSimulationEngine (150.7M Citizens, CRN Regimes A/B/C)"] <--> Mesh
 ```
-The diagram shows every major component, its cryptographic guarantees and how data flows from the citizen registry to the final allocation directive.
 
 ---
 
-## 2. Cryptographic Sortition & Demarchic Quarantine (`sortition.py`)
+## 2. Cryptographic Sortition, Quarantine & Civic Enablement (`sortition.py`, `civic_exam.py`)
+
 ### 2.1 Deterministic Merkle Tree (`compute_merkle_root`)
-1. Deduplicate and lexicographically sort citizen IDs `c₁ < c₂ < … < c_m`.  An empty set yields `SHA256("EMPTY_ELIGIBLE_POOL")`.
-2. Compute leaf digests `h₀,k = SHA256(c_k)`.
-3. Pairwise hash upwards, duplicating the last node when the level length is odd, until a single 256‑bit root `R_Merkle` remains.
-4. Any single‑bit change flips `R_Merkle` with probability `1‑2⁻²⁵⁶`.
+1. Deduplicate and lexicographically sort eligible citizen IDs $c_1 < c_2 < \dots < c_m$ (empty pool returns `SHA256("EMPTY_ELIGIBLE_POOL")`).
+2. Compute leaf digests $h_{0,k} = \text{SHA256}(c_k)$ and reduce pairwise up the binary tree (duplicating odd trailing nodes) to a 256-bit root $R_{\text{Merkle}}$.
 
-### 2.2 Multi‑Source Commit‑Reveal (`CommitRevealEntropyBeacon`)
-1. **Commit Phase:** At least `M≥2` independent institutions publish `C_s = SHA256(seed_s || "||" || nonce_s)`.
-2. **Reveal Phase:** After locking, each source reveals `(seed_s, nonce_s)`; verification uses constant‑time `hmac.compare_digest`.
-3. **Master Seed Derivation:** Sorted sources are concatenated with the scope, cycle and Merkle root:
-```
-S_master = SHA256(
-    "CIBERSOC_SORTITION_V2|" || scope || "|" || t || "|" || R_Merkle
-    || "|" || source_id || ":" || seed_s || ":" || nonce_s for each s
-)
-```
-Embedding `R_Merkle` guarantees the eligible pool cannot be altered after seeing the entropy commitments.
+### 2.2 Multi-Source Commit–Reveal (`CommitRevealEntropyBeacon`)
+1. **Commit:** $M \ge 2$ independent sources publish $C_s = \text{SHA256}(\text{seed}_s \parallel \texttt{"||"} \parallel \text{nonce}_s)$ prior to beacon lock.
+2. **Reveal:** Verified in constant time via `hmac.compare_digest`.
+3. **Master Seed:** Binds $R_{\text{Merkle}}$, scope, and cycle inside `SHA256("CIBERSOC_SORTITION_V2|" || scope || "|" || t || "|" || R_Merkle || ...)`, preventing post-commitment pool tampering.
 
-### 2.3 Bias‑Free Counter‑Mode DRBG (`CounterModeHmacDrbg`)
-The DRBG draws 64‑bit integers from the first 8 bytes of `HMAC‑SHA256(K=S_master, counter_be)`.  To avoid modulo bias, it computes a rejection threshold `L = 2⁶⁴ – (2⁶⁴ mod B)` and discards any sample `u ≥ L`.  The accepted `u` is uniformly distributed over `{0,…,B‑1}`.
-
-### 2.4 Proportional Hamilton Quotas (`allocate_proportional_hamilton_quotas`)
-Given strata populations `P_s` and total seats `S` (≤ total population):
-1. Compute exact floor quotas `q_s^floor = ⌊P_s·S / P_total⌋` and remainders `r_s = (P_s·S) mod P_total` using integer arithmetic only.
-2. Distribute the remaining `S – Σ q_s^floor` seats in descending order of `(-r_s, s)`.  Zero‑population strata never receive a seat.
-
-### 2.5 Compulsory Quarantine & Civilian‑First Role Assignment
-- **Quarantine Invariant:** When `register_mandate_completion(cid_list, t)` is called, each outgoing councillor is recorded in `_quarantined_until_cycle[cid] = max(prev, t + cooldown_cycles)`.  `is_eligible(cid, t')` returns `False` for all `t' ≤ t + cooldown_cycles`, guaranteeing `C_t ∩ C_{t+1} = ∅`.
-- **Internal Role Sub‑Sortition:** Derives a secondary seed `SHA256("INTERNAL_ROLES|" || S_master)`, shuffles the drawn councillors, assigns index 0 to the logistical `SecretaryGeneral`, filters out military personnel first for the `DEFENCE` ministry (raising `CivilianSupremacyViolationError` if none), then allocates the remaining portfolios.
-- **Zero‑Trust Public Verification (`verify_audit_proof`):** Checks (1) unique eligible IDs, (2) non‑empty bounded selection, (3) ≥ 2 commitments, (4) Merkle root equality, (5) source‑reveal alignment, (6) every commitment hash, (7) master seed derivation, (8) Hamilton quotas, (9) deterministic DRBG replay.
+### 2.3 Rejection-Sampled DRBG & Hamilton Quotas
+- **`CounterModeHmacDrbg`:** Extracts 64-bit blocks from `HMAC-SHA256(S_master, counter_be)` and rejects values $\ge 2^{64} - (2^{64} \bmod B)$, guaranteeing strictly uniform sampling without modulo bias.
+- **`allocate_proportional_hamilton_quotas`:** Computes exact integer floor seats $\lfloor P_s S / P_{\text{total}} \rfloor$ and distributes remainders by $(-r_s, s)$ without floating-point error.
+- **Compulsory Quarantine & Civic Enablement (`CivicExamScheduler`):** Outgoing councillors enter `_quarantined_until_cycle` ($C_t \cap C_{t+1} = \emptyset$). `CitizenExamRecord` evaluates exact statutory age exemption ($\ge 60$ years checked prior to attempt history) and tracks 4-subject compliance (`>= 60%`) plus technical-audit qualification (`>= 70%`).
 
 ---
 
-## 3. Council Mesh & Civilian Multi‑Sig Gate (`councils.py`)
-- **Escalated Topology:** `EscalatedCouncilMesh.EXPECTED_PARENT_TIER` enforces the strict hierarchy `SECTORAL → MUNICIPAL → STATE → FEDERAL → None` and forbids a `DEFENCE` ministry outside the Federal tier.
-- **Federated Seat Proportionality (`FederatedSeatProportionality`):** Enforces linear scaling $N_{\text{municipal}} = \lambda_{\text{mun}} \sum_{s \in \mathcal{S}(M)} N(s)$ with $\lambda_{\text{mun}} = 1.0$ (20 municipal seats in Curitiba strictly proportional to the 20 sectoral members of Boqueirão [10] and Matriz [10]). Guarantees 4 seats in Justice (ensuring the $\ge 3$ Popular Jury bench) while bounding the assembly at 20 members to preserve deliberative efficacy and prevent demographic quarantine exhaustion.
-- **Secretary‑General Logic:** `order_meeting_agenda` sorts deterministically by `(-urgency, seq, item_id)`.  `authenticate_resolution` ensures all voters belong to `valid_member_ids` and that `votes_in_favour ≥ (N//2)+1` before computing a resolution hash; any veto or unilateral decree raises `AutocraticActForbiddenError`.
-- **Civilian‑Military Command Gate:** Instantiation rejects any military minister or military member in the Defence Chamber.  `issue_strategic_order` requires: (a) a registered general, (b) signature of the sorted civilian minister, (c) agenda certification by the Federal Secretary‑General, and (d) approval by at least `⌈2/3·|D|⌉` sorted civilian Defence Chamber members.
+## 3. Council Mesh, Popular Jury Rotation & Civilian Multi-Sig (`councils.py`)
+
+- **Escalated Topology & Proportionality:** `EscalatedCouncilMesh` enforces `SECTORAL -> MUNICIPAL -> STATE -> FEDERAL -> None` and restricts `DEFENCE` to the Federal tier. `FederatedSeatProportionality` maintains $1:1$ municipal-to-sectoral seat parity (`20 = 10 + 10`).
+- **Logistical `SecretaryGeneral`:** Enforces `self.voting_weight == 1` in `authenticate_resolution` and rejects any veto or unilateral decree (`AutocraticActForbiddenError`).
+- **Per-Case Odd-Bench Jury Rotation:** When a Justice chamber has an even number of sorted citizens (e.g. `4`), `active_popular_jury_bench(case_id)` derives a deterministic `CounterModeHmacDrbg` seed from `(council_id, cycle, case_id)` to rotate which alternate sits out, forming an unbiased odd-numbered citizen bench while rejecting professional magistrate substitution (`JudicialOligarchyForbiddenError`).
+- **`CivilianMilitaryCommandGate`:** Requires a registered general, sorted civilian Defence minister signature, Federal Secretary-General certification, and $\ge \lceil 2/3 \cdot |D| \rceil$ civilian Defence Chamber co-signatures.
 
 ---
 
-## 4. Rational Fixed‑Point Enterprise Accounting (`enterprise.py`)
-1. **Property Bitmask:** `PropertyRightsBitmask.state_code` evaluates `(use << 3) | (sell << 2) | (buy << 1) | inherit`.  Only `[True, False, False, False]` (`8`) passes `assert_socialist_productive_unit()`.
-2. **Exact Integer‑Day Rational Surplus Division:** Floating‑point division introduces drift (e.g. `7 * Decimal(1)/Decimal(7) ≈ 1.0000000000000000000000000003`).  The method sums exact worker‑day integers `T = Σ d_w`, reduces each fraction by `g_w = gcd(d_w, T)`, and quantises only once with `ROUND_DOWN` to cent precision:
-```
- s_w = floor( Π_net * (d_w / g_w) / (T / g_w) )_{0.01}
- r_next = Π_net - Σ s_w
-```
-The invariant `0 ≤ r_next < N_active·0.01` holds mathematically, and corporate retained profit is always `Decimal("0.00")`.
+## 4. Rational Fixed-Point Enterprise Accounting (`enterprise.py`)
+
+1. **Usufruct Bitmask:** `PropertyRightsBitmask` permits only `[Use=True, Sell=False, Buy=False, Inherit=False]` (`state_code = 8`).
+2. **Exact Integer-Day Rational Division:** `distribute_period_profit` sums worked integer days $T = \sum_w d_w$, reduces each worker's fraction by $g_w = \gcd(d_w, T)$, and quantises once with `ROUND_DOWN`:
+   $$s_w = \left\lfloor \frac{\Pi_{\text{net}} \cdot (d_w / g_w)}{T / g_w} \right\rfloor_{0.01}, \qquad r_{\text{next}} = \Pi_{\text{net}} - \sum_w s_w$$
+   satisfying $0 \le r_{\text{next}} < N_{\text{active}} \cdot 0.01$ with corporate retention identically `Decimal("0.00")`.
 
 ---
 
-## 5. Sparse Input‑Output, Labour Values & Harmony (`cybernetics.py`)
-1. **CompressedSparseRowMatrix:** Stores only non‑zero technical coefficients (`|a_ij| > 1e‑15`) in three arrays, enabling `A·x` and `H·A` in `O(nnz(A))` time.
-2. **Spectral Check (Hawkins‑Simon):** `estimate_spectral_radius` runs a normalised power iteration to verify `ρ(A) < 1`, guaranteeing the existence of `(I‑A)⁻¹`.
-3. **Gauss‑Seidel Gross Output & Jacobi Embedded Labour:** Iterates until relative change `< 1e‑8`.  The labour identity `H·y ≡ l·x` holds at convergence.
-4. **Short‑Run Harmony Relaxation:** Scales initial output into the feasible box `[0, x_max]` and iteratively adjusts each sector proportionally to `(Ĥ – H(u_i))` with linear annealing and a non‑negative net‑output clamp.
-5. **Coercion‑Resistant Blinded Ballot Slots:** `cast_anonymous_ballot` maps an `unlinkable_voter_token` to `blinded_slot = SHA256(plebiscite_id || "||" || token)`, allowing voters under pressure to overwrite prior ballots while preserving one‑vote‑per‑citizen tallying.
+## 5. Sparse Leontief–Cockshott Solvers & Labour-Share Conservation (`cybernetics.py`)
+
+1. **CSR Sparse Matrix & Hawkins–Simon Check:** `CompressedSparseRowMatrix` computes $\mathbf{A}\mathbf{x}$ and $\mathbf{H}\mathbf{A}$ in $O(\text{nnz}(\mathbf{A}))$; `estimate_spectral_radius` verifies $\rho(\mathbf{A}) < 1$.
+2. **Labour-Share Demand Derivation:** `derive_final_demand_from_labour_shares` maps voted shares $s_j$ ($\sum_j s_j = 100$) and Jacobi embedded-labour values $\mathbf{H}$ to $y_j^* = \frac{(s_j / 100) L_{\text{total}}}{H_j}$, ensuring `compute_embedded_labour_shares_pct(y*, H)` recovers $s_j$ identically and $\mathbf{H}\cdot\mathbf{y}^* \equiv \mathbf{l}\cdot\mathbf{x}$.
+3. **Harmony Relaxation & Carbon Boundary:** `relax_short_run_capacity_harmony` equilibrates asymmetric Cockshott Harmony within $[\mathbf{0}, \mathbf{x}_{\max}]$, while `InteractiveCyberneticPlanState.iterate_plan_adjustment` adjusts targets by clearing ratios and enforces physical carbon ceilings.
 
 ---
 
-## 6. Reactive `i18n` and Clean‑Code Verification (`translator.py`, `audit.py`)
-- **LocalizationCatalog:** Loads `en_GB.json`, `pt.json` and `es.json` at startup, enforces exact key symmetry across locales, and notifies UI callbacks on `switch_locale`.
-- **audit_clean_code_compliance:** Streams every `.py` file through Python's lexer, rejecting any `COMMENT` token, and through `ast.parse`, rejecting any docstring node (`ast.Expr(ast.Constant(str))`).  This guarantees 100 % self‑explanatory Clean‑Code without textual crutches.
+## 6. SEEM Common-Random-Numbers (CRN) Counterfactual Engine (`simulation/engine.py`)
+
+- **150.7M Citizens & Inter-Regional Corridors:** Models 10 Brazilian regional poles connected by `INTER_REGIONAL_CORRIDORS` input–output trade flows, cryptographic `CounterModeHmacDrbg` regional councillor sortition (`CouncillorSlot`) with 1-cycle post-mandate quarantine, and portfolio-matched shock mitigation (`PORTFOLIO_EVENT_CATEGORIES`).
+- **CRN Institutional Regimes:** `NationalSimulationEngine` advances **(A) `CIBERSOC_DEMARCHY`**, **(B) `ELECTORAL_OLIGARCHY`**, and **(C) `BUREAUCRATIC_CENTRALISM`** over identical exogenous shock streams (`compare_regimes()`), isolating structural differences in HDI convergence, convergent Gini dynamics, and employment resilience.
 
 ---
 
-## 7. Quick Reference Summary
-- **Deterministic cryptography** ensures the eligible pool cannot be tampered after entropy commitments.
-- **Bias‑free DRBG** gives uniform random sampling for sortition.
-- **Hamilton quotas** allocate seats proportionally without floating‑point errors.
-- **Quarantine** guarantees no councillor serves two consecutive cycles.
-- **Enterprise surplus** is split exactly using integer‑day rational arithmetic.
-- **Leontief & Harmony solvers** run in sparse `O(nnz)` time with provable convergence.
-- **i18n** is live‑switched with zero restart cost.
-- **Clean‑Code audit** guarantees comment‑free, docstring‑free source as a project invariant.
+## 7. Reactive `i18n`, Mermaid Rendering & Clean-Code Audit (`translator.py`, `markdown_renderer.py`, `audit.py`)
 
-*All of the above mechanisms work together to provide a mathematically provable, transparent and socially equitable simulation platform.*
+- **`LocalizationCatalog`:** Enforces exact key-set symmetry across `en_GB.json`, `pt.json`, and `es.json`.
+- **`markdown_renderer.py`:** Renders fenced `mermaid` flowcharts into styled HTML cards inside `QTextBrowser`.
+- **`audit_clean_code_compliance`:** Streams every `.py` file through `tokenize` and `ast.parse`, enforcing zero `#` comments and zero docstrings repository-wide.

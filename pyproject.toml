@@ -4,11 +4,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cibersoc"
-version = "2.0.0"
-description = "CIBERSOC — Production Architecture for Permanent Cybernetic and Demarchic Socialism"
+version = "2.1.0"
+description = "CIBERSOC — Computational Mechanism Design, Cryptographic Sortition & Sparse Input-Output Governance Simulator"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Typing :: Typed",
+]
 dependencies = [
     "pyside6>=6.12.0",
 ]
@@ -34,6 +46,7 @@ cibersoc-sim = "cibersoc.cli:run_cli_entrypoint"
 where = ["src"]
 
 [tool.setuptools.package-data]
+"cibersoc" = ["py.typed"]
 "cibersoc.i18n" = ["catalogues/*.json"]
 "cibersoc.ui" = ["assets/fonts/*", "assets/js/*", "assets/js/controls/*"]
 
@@ -55,5 +68,9 @@ exclude_also = [
 
 [dependency-groups]
 dev = [
+    "coverage>=7.17.0",
     "pyright>=1.1.414",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "pytest-qt>=4.5.0",
 ]

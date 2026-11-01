@@ -20,6 +20,7 @@ class DarkCappuccinoPalette:
     accent_terracotta_alert: str = "#C26653"
 
 
+ConstructivistEspressoPalette = DarkCappuccinoPalette
 DEFAULT_PALETTE = DarkCappuccinoPalette()
 
 MIN_FONT_POINTS: int = 12
@@ -281,17 +282,17 @@ def build_dark_cappuccino_stylesheet(
         font-size: {base}pt;
         padding: {px(4)}px;
     }}
-    QComboBox, QSpinBox {{
+    QComboBox, QSpinBox, QDoubleSpinBox {{
         background-color: {palette.bg_moka_card};
         color: {palette.text_ivory_primary};
         border: 1px solid {palette.border_warm_roast};
         border-radius: {px(4)}px;
         padding: {px(5)}px {px(8)}px;
     }}
-    QComboBox:hover, QSpinBox:hover {{
+    QComboBox:hover, QSpinBox:hover, QDoubleSpinBox:hover {{
         border-color: {palette.text_latte_muted};
     }}
-    QComboBox:focus, QSpinBox:focus {{
+    QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {{
         border-color: {palette.accent_crema_amber};
     }}
     QComboBox QAbstractItemView {{
@@ -367,3 +368,6 @@ def build_dark_cappuccino_stylesheet(
         background: none;
     }}
     """
+
+
+build_constructivist_espresso_stylesheet = build_dark_cappuccino_stylesheet

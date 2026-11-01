@@ -1,26 +1,31 @@
 from __future__ import annotations
 
 from pathlib import Path
-from cibersoc.util import load_simulation_data as loader_module
+import pytest
+
 from cibersoc.util.load_simulation_data import (
     _checkpoint_path,
+    clear_loader_caches,
     list_checkpoints,
     load_audit_snapshot,
     load_mesh,
     load_population,
+    save_checkpoint,
 )
 
 
-def test_checkpoint_path_resolution() -> None:
+def test_checkpoint_path_resolution(tmp_path: Path) -> None:
     root_path = _checkpoint_path(None)
     assert root_path.name == "simulation_data"
     scenario_path = _checkpoint_path("custom_scenario")
     assert scenario_path.name == "custom_scenario"
     assert scenario_path.parent.name == "checkpoints"
+    custom_root_path = _checkpoint_path("alpha", data_root=tmp_path)
+    assert custom_root_path == tmp_path / "checkpoints" / "alpha"
 
 
 def test_load_population_default_and_custom() -> None:
-    loader_module.load_population.cache_clear()
+    clear_loader_caches()
     default_pop = load_population(None)
     assert isinstance(default_pop, list)
     assert len(default_pop) > 0
@@ -32,7 +37,7 @@ def test_load_population_default_and_custom() -> None:
 
 
 def test_load_mesh_default_and_custom() -> None:
-    loader_module.load_mesh.cache_clear()
+    clear_loader_caches()
     default_mesh = load_mesh(None)
     assert isinstance(default_mesh, dict)
     assert "total_councils" in default_mesh
@@ -43,7 +48,7 @@ def test_load_mesh_default_and_custom() -> None:
 
 
 def test_load_audit_snapshot_existing_and_missing() -> None:
-    loader_module.load_audit_snapshot.cache_clear()
+    clear_loader_caches()
     project_audit, clean_audit = load_audit_snapshot("scenario_10y_full_automation")
     assert project_audit is not None
     assert clean_audit is not None
@@ -54,27 +59,49 @@ def test_load_audit_snapshot_existing_and_missing() -> None:
     assert missing_clean is None
 
 
-def test_list_checkpoints_comprehensive(tmp_path: Path) -> None:
+def test_list_checkpoints_and_save_checkpoint(tmp_path: Path) -> None:
     checkpoints = list_checkpoints()
     assert "scenario_10y_full_automation" in checkpoints
     assert "scenario_climate_resilience_shock" in checkpoints
 
-    original_root = loader_module.BASE_DATA_ROOT
-    try:
-        loader_module.BASE_DATA_ROOT = tmp_path / "missing_dir"
-        assert list_checkpoints() == []
+    missing_root = tmp_path / "missing_dir"
+    assert list_checkpoints(data_root=missing_root) == []
 
-        test_data_dir = tmp_path / "test_data"
-        test_checkpoints = test_data_dir / "checkpoints"
-        test_checkpoints.mkdir(parents=True)
-        (test_checkpoints / "some_file.txt").write_text("not a dir", encoding="utf-8")
-        (test_checkpoints / "empty_dir").mkdir()
-        valid_dir = test_checkpoints / "valid_scenario"
-        valid_dir.mkdir()
-        (valid_dir / "population.json").write_text("[]", encoding="utf-8")
+    test_data_dir = tmp_path / "test_data"
+    test_checkpoints = test_data_dir / "checkpoints"
+    test_checkpoints.mkdir(parents=True)
+    (test_checkpoints / "some_file.txt").write_text("not a dir", encoding="utf-8")
+    (test_checkpoints / "empty_dir").mkdir()
 
-        loader_module.BASE_DATA_ROOT = test_data_dir
-        discovered = list_checkpoints()
-        assert discovered == ["valid_scenario"]
-    finally:
-        loader_module.BASE_DATA_ROOT = original_root
+    saved_named = save_checkpoint(
+        name="  valid_scenario  ",
+        population_payload=[{"citizen_id": "CID-0001"}],
+        mesh_payload={"cycle": 1, "total_councils": 1},
+        audit_payload={"project": {"is_self_contained": True}, "clean": {"is_compliant": True}},
+        data_root=test_data_dir,
+    )
+    assert saved_named == test_checkpoints / "valid_scenario"
+    assert list_checkpoints(data_root=test_data_dir) == ["valid_scenario"]
+    assert load_population("valid_scenario", data_root=test_data_dir) == [{"citizen_id": "CID-0001"}]
+    assert load_mesh("valid_scenario", data_root=test_data_dir)["total_councils"] == 1
+    proj, clean = load_audit_snapshot("valid_scenario", data_root=test_data_dir)
+    assert proj == {"is_self_contained": True}
+    assert clean == {"is_compliant": True}
+
+    saved_root = save_checkpoint(
+        name=None,
+        population_payload=[{"citizen_id": "CID-0002"}],
+        mesh_payload={"cycle": 2, "total_councils": 5},
+        audit_payload=None,
+        data_root=test_data_dir,
+    )
+    assert saved_root == test_data_dir
+    assert load_audit_snapshot(None, data_root=test_data_dir) == (None, None)
+
+    with pytest.raises(ValueError, match="cannot be blank"):
+        save_checkpoint(
+            name="   ",
+            population_payload=[],
+            mesh_payload={},
+            data_root=test_data_dir,
+        )

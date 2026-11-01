@@ -29,6 +29,8 @@ from cibersoc.cybernetics import (
     MacroAllocationPlebiscite,
     assert_concrete_macroeconomic_topic,
     compute_embedded_labour_hours_jacobi,
+    compute_embedded_labour_shares_pct,
+    derive_final_demand_from_labour_shares,
     evaluate_asymmetric_cockshott_harmony,
     relax_short_run_capacity_harmony,
     solve_leontief_gross_output_gauss_seidel,
@@ -837,6 +839,47 @@ def test_cybernetics_csr_validation_solvers_and_tie_equilibrium() -> None:
     total_embedded = sum(embedded_labour[i] * [100.0, 50.0][i] for i in range(2))
     total_direct = sum(direct_labour[i] * gross_output[i] for i in range(2))
     assert total_embedded == pytest.approx(total_direct, rel=1e-6)
+
+    derived_y = derive_final_demand_from_labour_shares(
+        matrix, direct_labour, ("EDU", "HLT"), {"EDU": 35.0, "HLT": 65.0}, 200.0
+    )
+    recovered_shares = compute_embedded_labour_shares_pct(
+        matrix, direct_labour, derived_y, ("EDU", "HLT")
+    )
+    assert recovered_shares["EDU"] == pytest.approx(35.0, abs=1e-3)
+    assert recovered_shares["HLT"] == pytest.approx(65.0, abs=1e-3)
+
+    with pytest.raises(ValueError):
+        compute_embedded_labour_shares_pct(matrix, direct_labour, derived_y, ("EDU",))
+    with pytest.raises(ValueError):
+        compute_embedded_labour_shares_pct(matrix, direct_labour, (-1.0, 10.0), ("EDU", "HLT"))
+    with pytest.raises(ValueError):
+        compute_embedded_labour_shares_pct(matrix, direct_labour, (0.0, 0.0), ("EDU", "HLT"))
+
+    with pytest.raises(ValueError):
+        derive_final_demand_from_labour_shares(
+            matrix, direct_labour, ("EDU", "EDU"), {"EDU": 100.0}, 100.0
+        )
+    with pytest.raises(ValueError):
+        derive_final_demand_from_labour_shares(
+            matrix, direct_labour, ("EDU", "HLT"), {"EDU": 50.0, "OTHER": 50.0}, 100.0
+        )
+    with pytest.raises(InfeasibleMacroPlanError):
+        derive_final_demand_from_labour_shares(
+            matrix, direct_labour, ("EDU", "HLT"), {"EDU": 50.0, "HLT": 50.0}, 0.0
+        )
+    with pytest.raises(InfeasibleMacroPlanError):
+        derive_final_demand_from_labour_shares(
+            matrix, direct_labour, ("EDU", "HLT"), {"EDU": 120.0, "HLT": -20.0}, 100.0
+        )
+    with pytest.raises(InfeasibleMacroPlanError):
+        derive_final_demand_from_labour_shares(
+            matrix, direct_labour, ("EDU", "HLT"), {"EDU": 50.0, "HLT": 40.0}, 100.0
+        )
+    with pytest.raises(InfeasibleMacroPlanError):
+        derive_final_demand_from_labour_shares(
+            matrix, (0.0, 0.0), ("EDU", "HLT"), {"EDU": 50.0, "HLT": 50.0}, 100.0
+        )
 
     assert evaluate_asymmetric_cockshott_harmony(-0.5) == pytest.approx(-0.25)
     assert evaluate_asymmetric_cockshott_harmony(0.25) == pytest.approx(0.5)

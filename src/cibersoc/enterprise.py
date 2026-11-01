@@ -106,8 +106,8 @@ def validate_worker_member(worker: WorkerMember) -> None:
     for forbidden_pattern in _FORBIDDEN_EXECUTIVE_PATTERNS:
         if forbidden_pattern.search(stripped_title):
             raise OrganisationalViolationError(
-                f"Abolished executive role detected ('{worker.role_title}'): CEO and C-Suite positions "
-                "are permanently extinguished in CIBERSOC for lacking rational or technical justification."
+                f"Horizontal governance invariant violated ('{worker.role_title}'): unilateral executive "
+                "roles (CEO/C-Suite) are excluded under productive usufruct bitmask [1,0,0,0]."
             )
     if worker.has_unilateral_executive_power:
         raise OrganisationalViolationError(

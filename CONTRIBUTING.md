@@ -1,78 +1,73 @@
 # Contributing to CIBERSOC
 
-Thank you for your interest in contributing to **CIBERSOC** (*Permanent Cybernetic and Demarchic Socialism*).
+Thank you for your interest in contributing to **CIBERSOC** (*Cybernetic and Demarchic Governance Architecture*).
 
-CIBERSOC is both an ideological and computational platform engineered with extreme scientific and software rigor. To preserve mathematical determinism, cryptographic verifiability, and absolute maintainability, all contributions must strictly adhere to the project's **Five Architectural Invariants**.
+CIBERSOC is a computational mechanism-design, social-choice, and economic-cybernetics research platform engineered for mathematical determinism, cryptographic auditability, and long-term maintainability. Every contribution must preserve the repository's **Five Architectural Invariants**.
 
 ---
 
 ## The Five Architectural Invariants
 
-Every Pull Request submitted to CIBERSOC must pass automated continuous integration verifying these five rules:
+Continuous Integration (`.github/workflows/ci.yml`) validates every Pull Request across CPython `3.12`, `3.13`, and `3.14` against these five non-negotiable rules:
 
-### 1. 100.00% Statement and Branch Coverage
-* The test suite enforces `--cov-fail-under=100` across all production modules in `src/cibersoc`.
-* Every new function, method, condition, and branch must have deterministic test coverage.
-* Run the test suite locally before submitting:
-  ```bash
-  uv run pytest
-  ```
+### 1. 100.00% Statement and Branch Coverage + Strict Static Typing
+- `pytest` enforces `--cov=src/cibersoc --cov-branch --cov-fail-under=100`.
+- `pyright` enforces strict type checking across `src/cibersoc` with `0 errors, 0 warnings, 0 informations`.
+- Every function, conditional branch, validation guard, and UI interaction path must be covered deterministically.
 
-### 2. Strict Zero-Mocks Policy
-* Synthetic doubles, stubs, and mock frameworks (`unittest.mock`, `MagicMock`, `AsyncMock`, `NonCallableMock`, `monkeypatch`) are **strictly prohibited** in the entire test suite.
-* Tests must exercise real domain models, real Leontief matrices, real sortition engines, and real PySide6 event loops.
-* This invariant is automatically checked by `tests/test_integrity_and_i18n.py::test_zero_mocks_in_entire_test_suite`.
+### 2. Zero Mocks & Zero Monkeypatching Policy
+- Synthetic test doubles and runtime attribute patching (`unittest.mock`, `MagicMock`, `AsyncMock`, `NonCallableMock`, `monkeypatch`, or ad-hoc `setattr` overrides on Qt classes) are **strictly prohibited** across `tests/conftest.py` and `tests/test_*.py`.
+- Boundary interactions (modal dialogs, file-save paths, URL launchers, headless detection, render-widget fallbacks, and temporary checkpoint roots) must use explicit, typed **Dependency Injection** parameters on constructors and functions.
+- Enforced automatically by `tests/test_integrity_and_i18n.py::test_zero_mocks_in_entire_test_suite`.
 
-### 3. Production Clean Code Standard
-* Production code in `src/cibersoc/**/*.py` must contain **0 comments (`#`)** and **0 docstrings (`"""`)**.
-* Code must be completely self-documenting through expressive variable naming, explicit typing, and transparent control flow.
-* Architectural rationale and theoretical formulations belong exclusively in `docs/` and `README.md`.
-* Enforced by `audit_clean_code_compliance`.
+### 3. AST & Lexer Self-Documenting Clean Code Standard
+- Every Python file in the repository (`src/`, `tests/`, and root entrypoints) must contain **0 comments (`#`)** and **0 docstrings (`"""`)**.
+- **Engineering Rationale:** Inline comments frequently decay into misleading artefacts when algorithms evolve. Requiring zero comments forces domain types, function signatures, and local identifiers to be completely self-explanatory, while full mathematical proofs, complexity analyses, and operational playbooks are maintained in `docs/` and `README.md`.
+- Enforced via Python's `tokenize` and `ast` modules in `audit_clean_code_compliance`.
 
-### 4. Trilingual Symmetry
-* The system operates under complete parity across **English (UK)** (`en-GB`), **Português** (`pt`), and **Español** (`es`).
-* Any new translation key added to `src/cibersoc/i18n/catalogues/en_GB.json` must be symmetrically translated and added to `pt.json` and `es.json`.
-* Enforced by `test_trilingual_localization_catalog_and_symmetry`.
+### 4. Complete Trilingual Symmetry (`en-GB`, `pt`, `es`)
+- All UI keys in `src/cibersoc/i18n/catalogues/{en_GB,pt,es}.json` must have identical key sets and symmetric format placeholders (`{variable}`).
+- All four technical manuals in `docs/en-GB/`, `docs/pt/`, and `docs/es/` must be updated together whenever domain mechanics or UI workflows change.
+- Enforced by `test_trilingual_localization_catalog_and_symmetry` and `audit_project_integrity`.
 
 ### 5. Analytical Vocabulary & Standalone Purity
-* The system is self-contained and avoids external runtime dependencies beyond PySide6 and pure Python standard library modules.
-* Code and documentation must avoid theological and speculative jargon, maintaining empirical, cybernetic, and mathematical precision.
+- Runtime dependencies are restricted to `PySide6` and the Python standard library, with zero external network calls.
+- All code and documentation must maintain precise mathematical, statistical, and computational terminology, avoiding speculative philosophical jargon.
+- Enforced by `test_analytical_vocabulary_and_standalone_purity`.
 
 ---
 
 ## Local Development Workflow
 
-### 1. Clone and Setup
+### 1. Clone and Provision
 ```bash
 git clone https://github.com/PJ-Oliveira/cibersoc.git
 cd cibersoc
-uv sync
+uv sync --all-extras --all-groups
 ```
 
-### 2. Type Checking
-CIBERSOC enforces strict static typing with Pyright:
+### 2. Run Static Type Analysis
 ```bash
 uv run pyright src/cibersoc
 ```
-All code must pass with `0 errors, 0 warnings, 0 informations`.
 
-### 3. Running the Test Suite
+### 3. Run the Full Headless Test & Coverage Suite
 ```bash
-uv run pytest
+QT_QPA_PLATFORM=offscreen uv run pytest
 ```
-All tests must pass with 100.00% statement and branch coverage.
 
-### 4. Running the Desktop Application
+### 4. Verify CLI and Desktop Entrypoints
 ```bash
-.venv/bin/python cibersoc_ui.py
+uv run python run_simulation.py --locale pt
+uv run python cibersoc_ui.py
 ```
 
 ---
 
-## Submitting a Pull Request
+## Pull Request Checklist
 
-Before pushing your branch or opening a Pull Request:
-1. Ensure `uv run pyright src/cibersoc` reports 0 errors.
-2. Ensure `uv run pytest` passes 100% of tests with 100.00% coverage.
-3. Ensure `uv run pytest tests/test_integrity_and_i18n.py --no-cov` reports all audits passed.
-4. Provide a clear and concise description of the change, linking any relevant issues.
+Before opening a Pull Request, verify that:
+1. `uv run pyright src/cibersoc` reports `0 errors, 0 warnings, 0 informations`.
+2. `QT_QPA_PLATFORM=offscreen uv run pytest` passes 100% of tests with `100.00%` statement and branch coverage.
+3. All new localization keys and documentation updates are symmetrically present in `en-GB`, `pt`, and `es`.
+4. Your commit description clearly explains the mathematical, algorithmic, or UI improvement introduced.

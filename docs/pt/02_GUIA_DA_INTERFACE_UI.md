@@ -1,129 +1,93 @@
 # 02. Guia da Interface de Usuário (UI)
 
-## 1. Arquitetura Visual & Sistema de Design *Dark Cappuccino*
+## 1. Arquitetura Visual e Sistema de Design *Constructivist Espresso* (`DarkCappuccinoPalette`)
 
-A aplicação cliente do **CIBERSOC** foi construída com **PySide6 (Qt 6.12)**.  A UI segue uma linguagem visual deliberadamente sóbria chamada **Dark Cappuccino** – uma paleta de marrons e cremes muito apagados que maximiza o contraste para legibilidade enquanto evita decorações chamativas.  Todas as cores são definidas em `src/cibersoc/ui/theme.py` e usadas de forma consistente nos widgets:
+O cliente desktop do **CIBERSOC** ([`CiberSocMainWindow`](../../src/cibersoc/ui/main_window.py)) foi construído em **PySide6 (Qt 6.12)**. A interface adota uma linguagem visual sóbria e ergonômica definida por `ConstructivistEspressoPalette` (`DarkCappuccinoPalette`) em [`theme.py`](../../src/cibersoc/ui/theme.py):
 
-| Token | Código Hex | Função |
-|---|---|---|
-| `bg_espresso_deep` | `#16110E` | Fundo da janela principal (canvas estrutural profundo) |
-| `bg_roast_panel` | `#1F1814` | Contêineres de área de trabalho, banner superior, fundo do canvas topológico |
-| `bg_moka_card` | `#29201B` | Tabelas interativas, botões, spin boxes numéricos, nós de conselho não selecionados |
-| `bg_roast_elevated` | `#362A23` | Cabeçalhos de abas ativas, cabeçalhos de seções de tabelas, destaque do nó de conselho selecionado |
-| `border_warm_roast` | `#4A3930` | Divisores estruturais nítidos de 1 px e links inativos da malha |
-| `text_ivory_primary` | `#F4EAD8` | Tipografia primária de alto contraste, telemetria monoespaçada |
-| `text_cream_secondary` | `#D7C5B0` | Subtítulos, métricas secundárias de nós, rótulos de abas inativas |
-| `accent_crema_amber` | `#C89B6D` | Bordas ativas, títulos de seção, fluxos ascendentes de demanda cidadã (`↑`) |
-| `accent_sage_ok` | `#84A97C` | Diretrizes descendentes compulsórias de plebiscito (`↓`) |
-| `accent_terracotta_alert` | `#C26653` | Botões de teste de guardas constitucionais (ex.: `#AlertActionButton`) |
+| Token | Código Hex | Papel Funcional |
+| :--- | :--- | :--- |
+| `bg_espresso_deep` | `#16110E` | Canvas estrutural profundo da janela principal |
+| `bg_roast_panel` | `#1F1814` | Contêineres das áreas de trabalho, barra superior global e fundo topológico |
+| `bg_moka_card` | `#29201B` | Tabelas interativas, botões, controles numéricos e nós não selecionados |
+| `bg_roast_elevated` | `#362A23` | Cabeçalhos de abas ativas, seções de tabelas e destaque do conselho selecionado |
+| `border_warm_roast` | `#4A3930` | Divisores estruturais nítidos de 1 px e conexões inativas da malha |
+| `text_ivory_primary` | `#F4EAD8` | Tipografia primária de alto contraste e telemetria monoespaçada |
+| `text_cream_secondary` | `#D7C5B0` | Subtítulos, métricas secundárias e rótulos de abas inativas |
+| `accent_crema_amber` | `#C89B6D` | Bordas ativas, títulos de seção e fluxos ascendentes de demandas cidadãs (`↑`) |
+| `accent_sage_ok` | `#84A97C` | Diretrizes descendentes compulsórias (`↓`) e selos verificados |
+| `accent_terracotta_alert` | `#C26653` | Botões de teste de salvaguardas constitucionais (`#AlertActionButton`) |
 
-> **Por que isso importa:** As escolhas de cores garantem um índice de contraste mínimo de 4,5:1 (WCAG AA) em todos os monitores suportados, tornando a UI acessível a usuários com deficiência visual moderada.
-
----
-
-## 2. Barra Superior Global & Troca de Idioma `i18n` ao Vivo
-
-No topo da janela há elementos persistentes:
-1. **Emblema das Asas da Liberdade & Identidade do Sistema** — O emblema heráldico-construtivista (`lbl_header_emblem`) une as Asas da Liberdade a uma engrenagem cibernética soviética e grilhões rompidos sob a paleta Dark Cappuccino, simbolizando a busca incessante pela emancipação popular e superação de muralhas autocráticas, definindo também o ícone oficial da janela e da Dock do sistema.
-2. **Seletor Instantâneo de Idioma (`cmb_language`)** – alterna entre **Inglês (UK)**, **Português**, e **Espanhol**. Selecionar um idioma chama `LocalizationCatalog.switch_locale`, que **re‑traduz cada widget, título de aba, cabeçalho de tabela, rótulo do canvas, texto da Carta e entradas do console de auditoria** instantaneamente, sem resetar o estado da simulação.
-3. **Controle de Escala Tipográfica (`A-`, `A+`, `Aa`)** — Ajuste dinâmico responsivo da fonte (mínimo de 12 pt, atalhos `Ctrl++`, `Ctrl+-`, `Ctrl+0`).
-4. **Selo de Ciclo Demárquico Ativo (`lbl_cycle_badge`)** – indica o ciclo de sorteio corrente (`CICLO DEMÁRQUICO #01`, `#02`, …).
-
-> **Dica:** O seletor de idioma recebe foco de teclado (`Alt+L`). Pressionar `Enter` após a seleção dispara a tradução de forma síncrona.
+> **Padrão de Acessibilidade:** Todos os pares texto/fundo cumprem índice de contraste mínimo de 4,5:1 (WCAG AA), combinados à fonte embarcada **Atkinson Hyperlegible** e tamanho mínimo garantido de **12 pt** em todos os controles.
 
 ---
 
-## 3. Seis Áreas Operacionais (Abas)
+## 2. Barra Superior Global e Troca de Idioma `i18n` em Tempo Real
 
-### 3.1 Conselhos & Malha Federada (`tabs.councils`)
-- **Painel esquerdo – Malha Escalonada Interativa de Conselhos** (`CouncilMeshCanvas`).  O canvas desenha em tempo real a hierarquia de quatro níveis (Federal → Estadual → Municipal → Setorial).  Os nós são **clicáveis**; ao pairar o mouse aparece uma tooltip com estatísticas do conselho (membros, participação no orçamento, mandatos atuais).
-- **Painel direito – Caixa de Resolução de Papéis**:
-  - **Caixa do Secretário‑Geral** exibe o ID do titular sorteado, estrato, peso unitário de voto (`1`) e mostra explicitamente *zero poder de veto*.
-  - **Banner de Proporcionalidade Matemática** (`lbl_council_proportionality`): Exibe a auditoria analítica e justificativa lógica das vagas (ex.: Conselho Municipal de Curitiba com 20 vagas, rigorosamente proporcional 1:1 à soma de 20 integrantes dos conselhos setoriais Boqueirão [10] e Matriz [10], garantindo 4 assentos para a Justiça e sustentando o quórum do Júri Popular sem sobrecarregar a quarentena amostral).
-  - **Tabela de Ministérios** lista cada ministério (ou câmara‑equivalente), o conselheiro sorteado, status civil vs técnico, e número de funcionários.
-  - **Caixa de comando da Defesa** permite emitir uma **Ordem Civil Multi‑Assinatura** ou testar o **Bloqueio Autônomo de General**.
-- **Visualização de fluxos direcionais:** setas âmbar‑crema (`↑`) iluminam quando uma demanda de bairro sobe a malha; setas verde‑sálvia tracejadas (`↓`) iluminam quando uma diretriz macro‑plebiscitária desce.
-- **Atalhos convenientes:** `Ctrl+E` escalona uma demanda aleatória de bairro; `Ctrl+R` refresca a malha após um sorteio.
-
-### 3.2 Sortição & Quarentena (`tabs.sortition`)
-- **Rótulo de resumo** (`lbl_sortition_summary`) mostra total de cidadãos cadastrados, conselheiros ativos e quantos estão em quarentena.
-- **Botão Próximo Ciclo** (`btn_next_cycle`) encerra os mandatos atuais, coloca os conselheiros que saem em **quarentena criptográfica** (não podem ser re‑selecionados até o próximo ciclo) e sorteia um novo conselho via **Commit‑Reveal SHA‑256** com quotas de Hamilton.
-- **Tabela de provas** (`tbl_proofs`) exibe o Merkle root de cada conselho, detalhamento das quotas de Hamilton e selo SHA‑256 – útil para auditorias.
-- **Botão de segurança** (`btn_block_election`) demonstra que qualquer tentativa de acionar uma eleição tradicional levanta um `ElectoralOperationForbiddenError`.
-
-### 3.3 Macro‑alocação Cibernética (`tabs.cybernetics`)
-- **Spin‑boxes de cédulas** (`spn_votes_edu`, `spn_votes_health`) permitem definir a parcela de um plebiscito binário (ex.: `+5 % Educação` vs `+5 % Saúde`).
-- **Botão Executar Plebiscito** (`btn_run_plebiscite`) resolve o sistema Leontief (`CSR` sparse solver) e aplica a **Harmonia de curto‑prazo de Cockshott** para obter um plano de produção viável.  A diretiva resultante é broadcast a todos os conselhos.
-- **Botões de guardas constitucionais** permitem testar conteúdo ilegal de cédula (`btn_block_person_pleb`) e simular desvios orçamentários de conselhos (`btn_block_council_override`).
-- **Tabela de Input‑Output** (`tbl_cyber`) mostra a parcela votada (`%`), demanda final `$y^*$`, produção bruta `$x = (I-A)^{-1} y^*$`, horas‑trabalho incorporadas `$H$` e índice de Harmonia de curto‑prazo por setor.
-
-### 3.4 Empresa Sem CEO & Retorno Civil (`tabs.enterprise`)
-- **Painel esquerdo – Livro‑Razão da Empresa Socialista** (`grp_enterprise_ledger`):
-  - Ajuste a *Receita Operacional do Período* (`spn_revenue`).
-  - Pressione **Distribuir Lucro 1/N** (`btn_distribute_profit`) para recomputar cotas exatas de trabalhadores usando aritmética racional (`fractions.Fraction`), garantindo retenção corporativa `$0.00`.
-  - Tabela de trabalhadores (`tbl_workers`) lista status de emprego (`Ativo na Produção`, `Em Mandato de Conselho`, `Reintegrado com Proteção`), pagamento base mensal e o pagamento igualitário do excedente.
-  - **Botão de bloqueio de CEO** demonstra que qualquer tentativa de nomear um CEO levanta um `CEOAppointmentForbiddenError`.
-- **Painel direito – Ciclo de Mandato do Cidadão Sorteado** (`grp_mandate_lifecycle`):
-  1. **Suspender Mandato** – remove temporariamente o cidadão do conselho.
-  2. **Ajuste de Inflação** – aplica um aumento percentual configurável ao subsídio.
-  3. **Reintegração Protegida** – garante um bloqueio de ≥ 180 dias antes de uma possível demissão.
-  4. **Teste de Bloqueio de Demissão Pós‑Retorno** – mostra que uma demissão após o retorno é rejeitada.
-
-### 3.5 Carta Arquitetural & Auditoria de Integridade (`tabs.charter`)
-- Exibe a **Carta Autônoma do CIBERSOC** (os 7 axiomas estruturais) no idioma ativo.
-- **Varredura completa de Clean‑Code & Documentação** (`btn_run_audit`) percorre todo o repositório, verifica:
-  - Zero manuais ausentes para cada idioma.
-  - Conformidade Clean‑Code (sem `TODO`s, pontuação Pylint ≥ 9.5, zero avisos de código morto).
-- Os resultados aparecem em um modal e são também registrados no console de auditoria persistente.
-
-### 3.6 README & Documentação do Sistema (`tabs.readme`)
-- Visualizador integrado nativo (`QTextBrowser` com renderização rica em Markdown) que permite ler o `README.md` e toda a documentação técnica sem sair da aplicação desktop.
-- **Seletor de Documentos (`cmb_doc_selector`):** Permite alternar instantaneamente entre o `README.md` e os 4 manuais técnicos da pasta `docs/` no idioma atualmente selecionado (01. Fundamentos Teóricos, 02. Guia da UI, 03. Manual do Simulador, 04. Mecânica Subjacente).
-- **Navegação Clicável por Hiperlinks:** Clicar em qualquer link Markdown relativo dentro do texto carrega o documento correspondente diretamente no visualizador e sincroniza o seletor.
-- **Botão de Retorno Rápido (`btn_open_readme`):** Restaura a exibição imediata do `README.md`.
-- **Acessibilidade e Zoom:** O conteúdo adapta-se em tempo real ao tamanho de fonte configurado pelo usuário (mínimo de 12 pt até 32 pt).
-
-### 3.7 Simulação Nacional — Motor SEEM (`tabs.simulation`)
-- **Anos por passo (`spn_years_step`):** Avança quantos anos você escolher em um clique (de 1 a 1000). **Não há limite total**: a simulação continua pelo tempo que você quiser, até você pressionar *Reiniciar Simulação*.
-- **Como ler o mapa 3D** (painel recolhível *Como ler este mapa*, disponível nos três idiomas):
-  - **Torres = IDH.** Uma torre por estado; a altura e a cor (vermelho → dourado → verde) mostram o IDH.
-  - **Anéis no chão = população.** O tamanho do anel é proporcional ao número de habitantes do estado. Os anéis são fixos.
-  - **Partículas em órbita = cidadãos (simbólico).** Todo estado recebe o mesmo número de pontos, então eles **não** medem a população e um ponto não é uma pessoa.
-- **Glossário exibido no painel:**
-  - **População:** todos que vivem em um estado (anel) ou no país inteiro (painel superior esquerdo).
-  - **Cidadãos:** habitantes que podem ser sorteados para governar; sorteia-se um por pasta a cada ano e ninguém serve duas vezes. O painel mostra quantos já foram sorteados.
-  - **IDH (Índice de Desenvolvimento Humano):** nota de 0 a 1 que combina saúde, educação e renda; quanto maior, melhor.
-  - **GINI:** desigualdade de renda de 0 (todos ganham igual) a 1 (uma só pessoa concentra tudo); quanto menor, melhor.
-  - **Emprego:** parcela da força de trabalho que tem ocupação.
+Controles persistentes no topo da janela principal:
+1. **Emblema Asas da Liberdade e Identidade do Sistema (`lbl_header_emblem`):** Emblema vetorial multirresolução que une asas geométricas, engrenagem cibernética industrial e elos rompidos; define também o ícone da janela e da Dock do macOS.
+2. **Seletor Instantâneo de Idioma (`cmb_language`):** Alterna instantaneamente entre **English (UK) — `en-GB`**, **Português — `pt`** e **Español — `es`** via `LocalizationCatalog.switch_locale`, retraduzindo cada widget, célula de tabela, nó do canvas, axioma da Carta e histórico de auditoria sem reiniciar o estado da simulação.
+3. **Controles de Escala Tipográfica (`A-`, `A+`, `Aa`):** Escala responsiva de **12 pt** a **32 pt** (`Ctrl++`, `Ctrl+-`, `Ctrl+0`) com persistência entre sessões.
+4. **Botão de Atalhos de Teclado (`?` / `F1`):** Abre um diálogo localizado listando todos os atalhos ativos.
+5. **Selo do Ciclo Demárquico Ativo (`lbl_cycle_badge`):** Exibe o ciclo de sorteio vigente (`CICLO DEMÁRQUICO #01`, `#02`, …).
 
 ---
 
-## 4. Console Persistente de Trilha de Auditoria
+## 3. Seis Áreas Operacionais Integradas (Abas)
 
-Um console de texto somente‑leitura (`grp_audit_console`) está ancorado na base da janela em todas as áreas de trabalho.  Ele mostra os **últimos 25 registros `LocalizedAuditEvent`**, indicando a ação, o agente que a disparou e o carimbo de tempo.  O console **auto‑atualiza** sempre que o idioma muda, garantindo que cada entrada seja exibida no idioma ativo.
+### 3.1 Malha Federada e Ministérios (`tabs.councils`)
+- **Painel Esquerdo — Malha Escalonada Interativa (`CouncilMeshCanvas`):** Topologia em 4 níveis (`Federal → Estadual → Municipal → Setorial`) com nós clicáveis, seletor sincronizado (`cmb_council`), escalonamento de demandas (`btn_escalate_demand`, `↑`) e canais descendentes de diretrizes (`↓`).
+- **Painel Direito — Resolução Granular de Funções e Câmaras:**
+  - **Quadro do Secretário-Geral (`grp_secretary`):** Exibe matrícula sorteada, estrato, peso unitário de voto (`1`), zero poder de veto/decreto, autenticação de maioria (`btn_sg_authenticate`) e teste de bloqueio autocrático (`btn_sg_veto_test`).
+  - **Banner de Proporcionalidade Matemática (`lbl_council_proportionality`):** Mostra a razão analítica exata de assentos (ex.: Conselho Municipal de Curitiba com `20` vagas estritamente proporcionais $1:1$ aos conselhos setoriais Boqueirão `[10]` + Matriz `[10]`).
+  - **Tabela de Câmaras Equivalentes a Ministérios (`tbl_ministries`):** Lista cada `MinistryPortfolio`, relator sorteado, condição civil vs. militar e efetivo.
+  - **Júri Popular e Supervisão de Segurança Pública (`grp_jury_security`):** Julga casos em bancada cidadã ímpar com rotação determinística de suplente por processo (`btn_jury_adjudicate`), bloqueia substituição por juiz de carreira (`btn_jury_block`), despacha patrulha vinculada a ordem civil (`btn_security_dispatch`) e bloqueia coerção unilateral (`btn_security_block`).
+  - **Trava Civil do Ministério da Defesa (`grp_defence`):** Emite ordens civis multi-assinatura (`btn_defence_order`) e bloqueia mobilização unilateral de general (`btn_defence_block`).
+
+### 3.2 Sorteio, Quarentena e Habilitação Cívica (`tabs.sortition`)
+- **Resumo Operacional (`lbl_sortition_summary`):** Exibe ciclo ativo, cadastro local (`320`), conselheiros em exercício (`76` nos 5 conselhos), ex-conselheiros em quarentena e reincidência consecutiva (`0` invariante).
+- **Ações de Sorteio e Snapshot:** Executa o próximo ciclo `Commit-Reveal SHA-256` (`btn_next_cycle`), testa o bloqueio constitucional de candidatura partidária (`btn_block_election` -> `ElectoralOperationForbiddenError`) ou salva um snapshot determinístico (`btn_save_checkpoint`) em `simulation_data/checkpoints/`.
+- **Agendador de Exames de Habilitação Cívica (`grp_civic_enablement`):** Monitora a qualificação periódica nas 4 disciplinas essenciais (`btn_civic_round`), aplicando isenção estatutária automática a partir dos 60 anos e habilitação para auditoria técnica (`>= 70%`).
+- **Tabela de Provas Criptográficas (`tbl_proofs`):** Exibe raiz de Merkle SHA-256, cotas de Hamilton por estrato e selo `VERIFICADA (SHA-256)`.
+
+### 3.3 Macro-Alocação Cibernética (`tabs.cybernetics`)
+- **Controles de Cédulas (`spn_votes_edu`, `spn_votes_health`) e Apuração (`btn_run_plebiscite`):** Executa plebiscito anônimo resistente à coação, deriva a demanda final física a partir das cotas exatas de trabalho incorporado ($s_j = 100 \cdot H_j y_j^* / \sum_k H_k y_k^*$), resolve produção bruta CSR de Leontief, aplica Harmonia de curto prazo de Cockshott e difunde a diretriz vinculante.
+- **Ajuste Iterativo do Plano e Fronteira Ecológica de Carbono (`grp_cyber_feedback`):** Simula feedback de razão de escoamento (`spn_clearing_ratio`) e respeito ao teto físico de carbono (`spn_carbon_budget`, `btn_iterate_plan`).
+- **Salvaguardas Constitucionais:** Bloqueia nomes de candidatos na cédula (`btn_block_person_pleb`) e desvios orçamentários de conselhos (`btn_block_council_override`).
+- **Tabela da Matriz Insumo-Produto (`tbl_cyber`):** Exibe cota de trabalho votada (`%`), demanda final $y^*$, produção bruta $x$, trabalho incorporado de Jacobi $H$ e índice de Harmonia por setor.
+
+### 3.4 Empresa Sem CEO e Retorno Civil (`tabs.enterprise`)
+- **Painel Esquerdo — Livro-Razão da Empresa Cooperativa (`grp_enterprise_ledger`):** Ajusta a Receita Operacional do Período (`spn_revenue`) e calcula cotas racionais exatas $1/N$ em dias inteiros (`btn_distribute_profit`) via `Decimal` e `math.gcd`, mantendo retenção corporativa identicamente em `$0.00`. Tentar nomear um CEO (`btn_block_ceo`) dispara `OrganisationalViolationError`.
+- **Painel Direito — Ciclo de Mandato do Cidadão Sorteado (`grp_mandate_lifecycle`):** Conduz `CID-0001` por (1) Suspensão por Mandato, (2) Reajuste de Subsídio pelo IPCA (`+0,50%`), (3) Reintegração Protegida ($\ge 180$ dias) e (4) Bloqueio de Demissão Pós-Retorno (`EmploymentStabilityLockError`).
+
+### 3.5 Axiomas, Integridade e Documentação (`tabs.charter_docs`)
+- **Carta Arquitetural e Scanner de Integridade (`grp_charter`):** Apresenta os 7 axiomas estruturais traduzidos, exporta arte FullHD localizada do emblema (`btn_export_fullhd_wallpaper`) e executa `btn_run_audit`, verificando 0 comentários `#` e 0 docstrings em todos os arquivos `.py` (`tokenize` + `ast.parse`) e paridade documental trilíngue completa.
+- **Leitor de README e Documentação do Sistema (`grp_readme`):** Leitor nativo Markdown com renderização estilizada de **diagramas Mermaid** (`QTextBrowser`), seletor instantâneo (`cmb_doc_selector`), navegação por links relativos, retorno rápido (`btn_open_readme`) e escala tipográfica até 32 pt.
+
+### 3.6 Simulação Nacional — Motor 3D SEEM (`tabs.simulation`)
+- **Escala Nacional e Topologia Continental:** Simula **150.700.000 habitantes** distribuídos em 10 polos macrorregionais brasileiros sobre silhueta vetorial continental com arcos 3D Bézier de comércio insumo-produto inter-regional, torres de IDH, anéis populacionais e conselheiros regionais com quarentena pós-mandato (`70` ativos/ano em 7 pastas × 10 polos).
+- **Comparador de Regimes Institucionais (`cmb_regime`):** Avalia três regimes sob **Números Aleatórios Comuns (CRN)** (mesma sequência de choques exógenos): **(A) CIBERSOC (Demarquia + Cibernética + 1/N)**, **(B) Oligarquia Eleitoral (Mercado + Partidos)** e **(C) Centralismo Burocrático (Estado Comandista)**, exibindo deltas comparativos em tempo real (`ΔIDH`, `ΔGini`) e exportando trajetórias CSV/JSON.
 
 ---
 
-## 5. Layout Responsivo Multi‑Tela (`ResponsiveLayoutMode`)
+## 4. Console Persistente de Auditoria e Layout Responsivo
 
-- **Ponto de quebra em 960 px**:
-  - `< 960 px` → modo *COMPACT*: os `QSplitter` duplos colapsam em pilha vertical, as barras de ação reorganizam‑se de cima para baixo, as tabelas usam `ResizeToContents` com rolagem suave por pixel.
-  - `≥ 960 px` → modo *EXPANDED*: os painéis permanecem lado a lado, as colunas se esticam proporcionalmente, e o canvas da malha expande para preencher o espaço.
-- **Todas as áreas de trabalho são envolvidas em um `QScrollArea`** com `widgetResizable=True`, evitando overflow em telas pequenas.
-- **Escala dinâmica do `CouncilMeshCanvas`** faz os retângulos de nós, conectores direcionais e legendas redimensionarem‑se matematicamente com as dimensões reais do widget, usando `QFontMetrics.elidedText` para evitar colisões de rótulos.
+- **Console de Auditoria (`grp_audit_console`):** Ancorado na base da janela em todas as abas, exibindo os 25 eventos `LocalizedAuditEvent` mais recentes retraduzidos ao vivo na troca de idioma.
+- **Ponto de Corte Adaptativo (`< 960 px` `COMPACT` vs. `>= 960 px` `EXPANDED`):** Empilha divisores e barras de ação verticalmente em janelas estreitas, garantindo zero rolagem horizontal até `680×500`.
 
 ---
 
-## 6. Dicas Rápidas para Usuários Avançados
+## 5. Referência de Atalhos de Teclado
 
-| Ação | Atalho | Efeito |
-|---|---|---|
-| Abrir seletor de idioma | `Alt+L` | Troca instantânea de idioma |
-| Escalar demanda aleatória de bairro | `Ctrl+E` | Envia uma demanda ao longo da malha |
-| Atualizar malha após sortição | `Ctrl+R` | Redesenha o grafo de conselhos |
-| Executar auditoria completa | `Ctrl+Shift+A` | Roda verificação de Clean‑Code, documentação e integridade |
-| Salvar checkpoint (automático ao fechar) | – | Fechar a janela dispara `closeEvent` → grava `population.json`, `mesh.json`, `audit_snapshot.json` em uma pasta timestamped em `simulation_data/checkpoints/` |
-
----
-
-*Todos os elementos da UI são totalmente navegáveis por teclado e expõem nomes acessíveis para leitores de tela via a propriedade `accessibleName` do Qt.*
+| Atalho | Escopo | Ação |
+| :--- | :--- | :--- |
+| `F1` ou `?` | Global | Abrir diálogo localizado de Atalhos de Teclado |
+| `Ctrl+1` … `Ctrl+6` | Global | Alternar diretamente para a Aba 1 … 6 |
+| `Ctrl++` / `Ctrl+=` | Global | Aumentar tamanho da fonte (`A+`, até 32 pt) |
+| `Ctrl+-` | Global | Diminuir tamanho da fonte (`A-`, mínimo 12 pt) |
+| `Ctrl+0` | Global | Restaurar tamanho padrão da fonte (`Aa`) |
+| `F11` | Global | Alternar modo tela cheia (*fullscreen*) |
+| `Alt+Up` / `Alt+Down` | Global | Percorrer conselho inspecionado na malha federativa de 4 níveis |
+| `Space` | Aba 6 (SEEM) | Iniciar / Pausar simulação anual contínua |
+| `Right` | Aba 6 (SEEM) | Avançar simulação pelo número de anos em `spn_years_step` |
+| `R` | Aba 6 (SEEM) | Reiniciar simulação SEEM para o Ano 2026 |
+| `+` / `-` | Aba 6 (SEEM) | Aproximar / Afastar câmera 3D |

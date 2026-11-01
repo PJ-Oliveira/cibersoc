@@ -12,6 +12,7 @@ from ..audit import (
     audit_clean_code_compliance,
     audit_project_integrity,
 )
+from ..civic_exam import EXAM_SUBJECTS, CitizenExamRecord, CivicExamScheduler, SubjectScore
 from ..councils import (
     AgendaItem,
     AutocraticActForbiddenError,
@@ -39,7 +40,11 @@ from ..cybernetics import (
     MacroAllocationOption,
     MacroAllocationPlebiscite,
     MarketClearingFeedbackMetric,
+    apply_cockshott_plan_iteration,
     audit_in_natura_ecological_budget,
+    compute_embedded_labour_hours_jacobi,
+    compute_embedded_labour_shares_pct,
+    derive_final_demand_from_labour_shares,
     evaluate_market_clearing_feedback,
     relax_short_run_capacity_harmony,
     solve_kantorovich_plan_ray_expansion,
@@ -65,6 +70,7 @@ from ..sortition import (
     SortitionAuditProof,
     StratifiedSortitionEngine,
 )
+from ..util.load_simulation_data import list_checkpoints, save_checkpoint
 
 COUNCIL_TOPOLOGY_SPECIFICATIONS: tuple[
     tuple[str, CouncilTier, str | None, int, bool, str | None, str | None, str | None], ...
@@ -221,9 +227,20 @@ class SimulationOrchestrator:
         )
         self.direct_labour_vector = (0.55, 0.60, 0.35, 0.30)
         self.capacity_ceilings = (260.0, 260.0, 520.0, 420.0)
+        self.social_labour_budget_hours: float = 360.0
+        self.market_clearing_ratio: float = 1.08
+        self.carbon_budget_megatons: float = 450.0
+        self.carbon_intensities: tuple[float, ...] = (0.12, 0.15, 0.45, 0.38)
+        self.current_iterated_demand: tuple[float, ...] = ()
+        self.last_kantorovich_ray: KantorovichPlanRayResult | None = None
+        self.last_ecological_audit: InNaturaEcologicalConstraint | None = None
         self.last_directive: CompulsoryAllocationDirective | None = None
         self.last_harmonies: tuple[float, ...] = ()
         self._plebiscite_sequence: int = 0
+
+        self.exam_scheduler = CivicExamScheduler()
+        self.exam_reference_date = date(2026, 6, 1)
+        self.exam_records: dict[str, CitizenExamRecord] = self._initialize_civic_exam_records()
 
         self.audit_events: list[LocalizedAuditEvent] = []
         self.last_scan_results: tuple[ProjectIntegrityReport, CleanCodeAuditReport] | None = None
@@ -300,7 +317,7 @@ class SimulationOrchestrator:
 
             is_military = index % 20 == 0
             given = given_names[(index - 1) % len(given_names)]
-            surname = family_names[((index - 1) // len(given_names)) % len(family_names)]
+            surname = family_names[((index - 1) * 7) % len(family_names)]
             citizens.append(
                 CitizenProfile(
                     citizen_id=f"CID-{index:04d}",
@@ -684,27 +701,43 @@ class SimulationOrchestrator:
         self, votes_education: int, votes_health: int
     ) -> CompulsoryAllocationDirective:
         self._plebiscite_sequence += 1
+        shares_education = {
+            "sector.public_education": 30.0,
+            "sector.public_health": 25.0,
+            "sector.industry_inputs": 25.0,
+            "sector.energy_infrastructure": 20.0,
+        }
+        shares_health = {
+            "sector.public_education": 25.0,
+            "sector.public_health": 30.0,
+            "sector.industry_inputs": 25.0,
+            "sector.energy_infrastructure": 20.0,
+        }
+        demand_education = derive_final_demand_from_labour_shares(
+            technical_matrix=self.technical_matrix,
+            direct_labour_vector=self.direct_labour_vector,
+            sector_keys=self.sector_keys,
+            budget_shares_pct=shares_education,
+            total_social_labour_budget=self.social_labour_budget_hours,
+        )
+        demand_health = derive_final_demand_from_labour_shares(
+            technical_matrix=self.technical_matrix,
+            direct_labour_vector=self.direct_labour_vector,
+            sector_keys=self.sector_keys,
+            budget_shares_pct=shares_health,
+            total_social_labour_budget=self.social_labour_budget_hours,
+        )
         option_education = MacroAllocationOption(
             option_id="FLOW-EDU-PLUS5",
             description="Allocate +5% of annual federal budget to Public Education and Technical Centres",
-            target_final_demand=(165.0, 140.0, 180.0, 130.0),
-            budget_shares_pct={
-                "sector.public_education": 30.0,
-                "sector.public_health": 25.0,
-                "sector.industry_inputs": 25.0,
-                "sector.energy_infrastructure": 20.0,
-            },
+            target_final_demand=demand_education,
+            budget_shares_pct=shares_education,
         )
         option_health = MacroAllocationOption(
             option_id="FLOW-HEALTH-PLUS5",
-            description="Allocate +5% of annual federal budget to Public Health and State Pharmaceuticals",
-            target_final_demand=(140.0, 165.0, 180.0, 130.0),
-            budget_shares_pct={
-                "sector.public_education": 25.0,
-                "sector.public_health": 30.0,
-                "sector.industry_inputs": 25.0,
-                "sector.energy_infrastructure": 20.0,
-            },
+            description="Allocate +5% of annual federal budget to Public Health and Pharmaceuticals",
+            target_final_demand=demand_health,
+            budget_shares_pct=shares_health,
         )
         plebiscite = MacroAllocationPlebiscite(
             plebiscite_id=f"PLEB-FED-{self._plebiscite_sequence:02d}",
@@ -741,10 +774,11 @@ class SimulationOrchestrator:
         _, _, harmonies = relax_short_run_capacity_harmony(
             technical_matrix=self.technical_matrix,
             target_final_demand=directive.compulsory_final_demand,
-            capacity_ceiling=(250.0, 250.0, 330.0, 400.0),
+            capacity_ceiling=self.capacity_ceilings,
         )
         self.last_directive = directive
         self.last_harmonies = tuple(round(value, 4) for value in harmonies)
+        self.execute_interactive_plan_iteration(record_event=False)
         self.record_audit_event(
             "log.plebiscite_sealed",
             plebiscite_id=directive.plebiscite_id,
@@ -977,3 +1011,179 @@ class SimulationOrchestrator:
             sector_outputs=sector_outputs,
             carbon_intensity_per_output=carbon_intensity_per_output,
         )
+
+    def _initialize_civic_exam_records(self) -> dict[str, CitizenExamRecord]:
+        records: dict[str, CitizenExamRecord] = {}
+        initial_exam_date = date(2025, 9, 15)
+        for index, citizen in enumerate(self.population, start=1):
+            birth_year = 2006 - ((index * 11) % 52)
+            dob = date(birth_year, ((index - 1) % 12) + 1, ((index * 3) % 27) + 1)
+            record = CitizenExamRecord(citizen_id=citizen.citizen_id, date_of_birth=dob)
+            if not record.is_age_exempt(self.exam_reference_date):
+                base_score = 54 + ((index * 13) % 42)
+                scores = tuple(SubjectScore(subj, base_score) for subj in EXAM_SUBJECTS)
+                self.exam_scheduler.record_attempt(record, scores, initial_exam_date)
+            records[citizen.citizen_id] = record
+        return records
+
+    def civic_enablement_summary(self) -> dict[str, int]:
+        return self.exam_scheduler.cohort_compliance_summary(
+            list(self.exam_records.values()), self.exam_reference_date
+        )
+
+    def run_civic_enablement_round(self) -> dict[str, int]:
+        newly_enabled = 0
+        for index, record in enumerate(self.exam_records.values(), start=1):
+            if not record.is_compliant(self.exam_reference_date):
+                retest_score = 78 + (index % 18)
+                scores = tuple(SubjectScore(subj, retest_score) for subj in EXAM_SUBJECTS)
+                self.exam_scheduler.record_attempt(record, scores, self.exam_reference_date)
+                newly_enabled += 1
+        summary = self.civic_enablement_summary()
+        self.record_audit_event(
+            "log.civic_exam_round",
+            enabled=newly_enabled,
+            compliant=summary["compliant"],
+            total=summary["total"],
+            exempt=summary["age_exempt"],
+        )
+        return summary
+
+    def embedded_labour_shares_for_directive(self) -> dict[str, float]:
+        assert self.last_directive is not None
+        return compute_embedded_labour_shares_pct(
+            technical_matrix=self.technical_matrix,
+            direct_labour_vector=self.direct_labour_vector,
+            final_demand=self.last_directive.compulsory_final_demand,
+            sector_keys=self.sector_keys,
+        )
+
+    def execute_interactive_plan_iteration(
+        self,
+        clearing_ratio: float | None = None,
+        carbon_budget_megatons: float | None = None,
+        record_event: bool = True,
+    ) -> tuple[tuple[float, ...], KantorovichPlanRayResult, InNaturaEcologicalConstraint]:
+        if clearing_ratio is not None:
+            self.market_clearing_ratio = clearing_ratio
+        if carbon_budget_megatons is not None:
+            self.carbon_budget_megatons = carbon_budget_megatons
+        assert self.last_directive is not None
+        base_demand = self.last_directive.compulsory_final_demand
+        embedded_hours = compute_embedded_labour_hours_jacobi(
+            self.technical_matrix, self.direct_labour_vector
+        )
+        ratio_delta = self.market_clearing_ratio - 1.0
+        sector_ratios = (
+            self.market_clearing_ratio,
+            max(0.20, 1.0 + ratio_delta * 0.50),
+            1.0,
+            max(0.20, 1.0 - ratio_delta * 0.25),
+        )
+        metrics = [
+            evaluate_market_clearing_feedback(
+                sector_id=self.sector_keys[idx],
+                labor_value_hours=embedded_hours[idx],
+                market_clearing_price_tokens=embedded_hours[idx] * sector_ratios[idx],
+            )
+            for idx in range(len(self.sector_keys))
+        ]
+        iterated = tuple(apply_cockshott_plan_iteration(base_demand, metrics, adjustment_speed=0.5))
+        relaxed_gross, _, harmonies = relax_short_run_capacity_harmony(
+            technical_matrix=self.technical_matrix,
+            target_final_demand=iterated,
+            capacity_ceiling=self.capacity_ceilings,
+        )
+        self.current_iterated_demand = iterated
+        self.last_harmonies = tuple(round(value, 4) for value in harmonies)
+        ray_proportions = tuple(max(1.0, value) for value in iterated)
+        ray_result = solve_kantorovich_plan_ray_expansion(
+            proportional_ray=ray_proportions,
+            available_capacities=self.capacity_ceilings,
+            unit_input_requirements=(1.0, 1.05, 1.10, 1.15),
+        )
+        eco_result = audit_in_natura_ecological_budget(
+            annual_carbon_budget_megatons=self.carbon_budget_megatons,
+            sector_outputs=relaxed_gross,
+            carbon_intensity_per_output=self.carbon_intensities,
+        )
+        self.last_kantorovich_ray = ray_result
+        self.last_ecological_audit = eco_result
+        if record_event:
+            self.record_audit_event(
+                "log.cybernetic_iteration",
+                ratio=f"{self.market_clearing_ratio:.2f}",
+                ray_lambda=f"{ray_result.max_expansion_lambda:.3f}",
+                carbon_draw=f"{eco_result.current_physical_carbon_draw:.1f}",
+                carbon_cap=f"{eco_result.annual_carbon_budget_megatons:.1f}",
+                within_boundary=eco_result.is_within_planetary_boundary,
+            )
+        return iterated, ray_result, eco_result
+
+    def export_population_payload(self) -> list[dict[str, object]]:
+        return [
+            {
+                "citizen_id": c.citizen_id,
+                "full_name": c.full_name,
+                "sector_id": c.sector_id,
+                "municipality_id": c.municipality_id,
+                "state_id": c.state_id,
+                "stratum_key": c.stratum_key,
+                "is_military_personnel": c.is_military_personnel,
+                "prior_monthly_income": f"{c.prior_monthly_income:.2f}",
+                "employer_id": c.employer_id,
+                "job_role": c.job_role,
+            }
+            for c in self.population
+        ]
+
+    def export_mesh_payload(self) -> dict[str, object]:
+        councils = self.mesh.list_councils()
+        return {
+            "cycle": self.current_cycle,
+            "total_councils": len(councils),
+            "councils": [
+                {
+                    "council_id": council.council_id,
+                    "tier": council.tier.value,
+                    "name": council.name,
+                    "total_seats": len(council.members),
+                    "members": [member.citizen_id for member in council.members],
+                }
+                for council in councils
+            ],
+        }
+
+    def save_orchestrator_checkpoint(
+        self, checkpoint_name: str | None = None, data_root: Path | None = None
+    ) -> Path:
+        audit_payload: dict[str, object] | None = None
+        if self.last_scan_results is not None:
+            proj, clean = self.last_scan_results
+            audit_payload = {
+                "project": {
+                    "is_self_contained": proj.is_self_contained,
+                    "project_files_scanned": proj.project_files_scanned,
+                    "locales": list(proj.documentation_locales_verified),
+                },
+                "clean": {
+                    "is_compliant": clean.is_compliant,
+                    "files_scanned": clean.python_files_scanned,
+                },
+            }
+        saved_dir = save_checkpoint(
+            name=checkpoint_name,
+            population_payload=self.export_population_payload(),
+            mesh_payload=self.export_mesh_payload(),
+            audit_payload=audit_payload,
+            data_root=data_root,
+        )
+        self.record_audit_event(
+            "log.checkpoint_saved",
+            checkpoint=checkpoint_name or "root",
+            cycle=self.current_cycle,
+        )
+        return saved_dir
+
+    def available_checkpoints(self, data_root: Path | None = None) -> list[str]:
+        return list_checkpoints(data_root=data_root)

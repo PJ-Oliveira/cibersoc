@@ -227,6 +227,64 @@ def compute_embedded_labour_hours_jacobi(
     raise InfeasibleMacroPlanError("Jacobi embedded-labour solver failed to converge.")
 
 
+def compute_embedded_labour_shares_pct(
+    technical_matrix: CompressedSparseRowMatrix,
+    direct_labour_vector: Sequence[float],
+    final_demand: Sequence[float],
+    sector_keys: Sequence[str],
+) -> dict[str, float]:
+    dimension = technical_matrix.dimension
+    if len(sector_keys) != dimension or len(final_demand) != dimension:
+        raise ValueError("Dimensions of sector_keys and final_demand must match technical_matrix.")
+    if any(not math.isfinite(component) or component < 0.0 for component in final_demand):
+        raise ValueError("Final demand components must be finite and non-negative.")
+
+    embedded_labour = compute_embedded_labour_hours_jacobi(technical_matrix, direct_labour_vector)
+    sector_labour = [embedded_labour[j] * float(final_demand[j]) for j in range(dimension)]
+    total_labour = sum(sector_labour)
+    if total_labour <= 0.0:
+        raise ValueError("Total embedded social labour must be strictly positive.")
+    return {
+        sector_keys[j]: round(100.0 * sector_labour[j] / total_labour, 4) for j in range(dimension)
+    }
+
+
+def derive_final_demand_from_labour_shares(
+    technical_matrix: CompressedSparseRowMatrix,
+    direct_labour_vector: Sequence[float],
+    sector_keys: Sequence[str],
+    budget_shares_pct: Mapping[str, float],
+    total_social_labour_budget: float,
+) -> tuple[float, ...]:
+    dimension = technical_matrix.dimension
+    if len(sector_keys) != dimension or len(set(sector_keys)) != dimension:
+        raise ValueError("sector_keys must contain unique labels matching technical_matrix dimension.")
+    if set(budget_shares_pct.keys()) != set(sector_keys):
+        raise ValueError("budget_shares_pct keys must match sector_keys.")
+    if not math.isfinite(total_social_labour_budget) or total_social_labour_budget <= 0.0:
+        raise InfeasibleMacroPlanError("Total social labour budget must be strictly positive.")
+    if any(not math.isfinite(share) or share < 0.0 for share in budget_shares_pct.values()):
+        raise InfeasibleMacroPlanError("Budget shares must be finite and non-negative.")
+    share_sum = sum(budget_shares_pct.values())
+    if abs(share_sum - 100.0) > 1e-4:
+        raise InfeasibleMacroPlanError(
+            f"Budget shares violate conservation: sum = {share_sum:.4f}% != 100%."
+        )
+
+    embedded_labour = compute_embedded_labour_hours_jacobi(technical_matrix, direct_labour_vector)
+    if any(hours <= 0.0 for hours in embedded_labour):
+        raise InfeasibleMacroPlanError("Embedded labour hours per sector must be strictly positive.")
+
+    return tuple(
+        round(
+            ((budget_shares_pct[sector_keys[j]] / 100.0) * total_social_labour_budget)
+            / embedded_labour[j],
+            6,
+        )
+        for j in range(dimension)
+    )
+
+
 def evaluate_asymmetric_cockshott_harmony(relative_fulfilment: float) -> float:
     if relative_fulfilment < 0.0:
         return -(relative_fulfilment * relative_fulfilment)

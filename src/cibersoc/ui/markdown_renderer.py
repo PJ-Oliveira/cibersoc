@@ -166,6 +166,58 @@ def render_inline_markdown(text: str, project_root: Path | None = None) -> str:
     return s
 
 
+def _extract_mermaid_node(raw_token: str, node_labels: dict[str, str]) -> str:
+    token = raw_token.strip()
+    match = re.match(r'^([A-Za-z0-9_.-]+)\s*(?:\[\s*"?([^"\]]+)"?\s*\]|\(\s*"?([^"\)]+)"?\s*\))$', token)
+    if match:
+        node_id = match.group(1)
+        label = (match.group(2) or match.group(3) or node_id).strip()
+        node_labels[node_id] = label
+        return node_id
+    node_labels.setdefault(token, token)
+    return token
+
+
+def render_mermaid_diagram(code_lines: list[str]) -> str:
+    node_labels: dict[str, str] = {}
+    edges: list[tuple[str, str, str]] = []
+    fallback_lines: list[str] = []
+    for raw_line in code_lines:
+        stripped = raw_line.strip().rstrip(";")
+        if not stripped or re.match(r"^(?:flowchart|graph|sequenceDiagram|stateDiagram)", stripped):
+            continue
+        edge_match = re.match(
+            r"^(.+?)\s*(?:-->|--|==>|->>)\s*(?:\|([^|]+)\|\s*)?(.+)$",
+            stripped,
+        )
+        if edge_match:
+            src_id = _extract_mermaid_node(edge_match.group(1), node_labels)
+            edge_label = (edge_match.group(2) or "").strip()
+            dst_id = _extract_mermaid_node(edge_match.group(3), node_labels)
+            edges.append((src_id, dst_id, edge_label))
+        else:
+            fallback_lines.append(stripped)
+    if not edges:
+        items_html = "".join(
+            f'<div class="mermaid-step"><span class="mermaid-node">{html.escape(item)}</span></div>'
+            for item in fallback_lines
+        )
+        return f'<div class="mermaid-diagram">{items_html}</div>'
+    steps_html: list[str] = []
+    for src_id, dst_id, edge_label in edges:
+        src_html = html.escape(node_labels[src_id])
+        dst_html = html.escape(node_labels[dst_id])
+        arrow_text = f"→ {html.escape(edge_label)} →" if edge_label else "→"
+        steps_html.append(
+            f'<div class="mermaid-step">'
+            f'<span class="mermaid-node">{src_html}</span>'
+            f'<span class="mermaid-arrow">{arrow_text}</span>'
+            f'<span class="mermaid-node">{dst_html}</span>'
+            f"</div>"
+        )
+    return f'<div class="mermaid-diagram">{"".join(steps_html)}</div>'
+
+
 def render_markdown_table(lines: list[str]) -> str:
     rows: list[list[str]] = []
     for line in lines:
@@ -370,6 +422,29 @@ li {{
     padding: 1px 4px;
     border-radius: 2px;
 }}
+.mermaid-diagram {{
+    background-color: #16110E;
+    border: 1px solid #5C4335;
+    border-left: 4px solid #C89B6D;
+    padding: 10px 12px;
+    margin: 12px 0;
+}}
+.mermaid-step {{
+    margin: 5px 0;
+    line-height: 1.5;
+}}
+.mermaid-node {{
+    background-color: #29201B;
+    color: #F4EAD8;
+    border: 1px solid #4A3930;
+    padding: 2px 8px;
+    font-weight: bold;
+}}
+.mermaid-arrow {{
+    color: #C89B6D;
+    font-weight: bold;
+    padding: 0 8px;
+}}
 """
 
 
@@ -401,6 +476,9 @@ def render_markdown_to_html(
                     break
                 code_lines.append(lines[index])
                 index += 1
+            if lang.lower() == "mermaid":
+                html_parts.append(render_mermaid_diagram(code_lines))
+                continue
             lang_attr = f' class="language-{html.escape(lang)}"' if lang else ""
             escaped_code = html.escape("\n".join(code_lines))
             html_parts.append(f"<pre><code{lang_attr}>{escaped_code}</code></pre>")

@@ -4,105 +4,78 @@
 
 ```mermaid
 flowchart TD
-    Pop["Cadastro Cidadão (CitizenProfile)"] --> Elig["Filtro de Elegibilidade e Quarentena (StratifiedSortitionEngine)"]
+    Pop["Cadastro Cidadão (CitizenProfile)"] --> Elig["Elegibilidade, Quarentena e Exame Cívico (StratifiedSortitionEngine)"]
     Beacon["Entropia Multifonte (CommitRevealEntropyBeacon)"] --> Seed["Semente Mestra com Separação de Domínio (SHA-256)"]
     Elig --> Merkle["Raiz de Merkle da Urna Elegível (SHA-256)"]
     Merkle --> Seed
     Seed --> DRBG["DRBG HMAC-SHA256 em Modo Contador Sem Viés"]
     Elig --> Hamilton["Cotas de Maiores Sobras de Hamilton"]
     Hamilton --> DRBG
-    DRBG --> Mesh["Malha Escalonada de 4 Níveis (Setorial ↔ Municipal ↔ Estadual ↔ Federal)"]
-    DRBG --> Roles["Sub-Sorteio de Secretário-Geral e Câmaras Ministeriais (Defesa = 100% Civil)"]
-    Pleb["Plebiscito Macroeconômico Fechado (Cédulas Anônimas Cegadas)"] --> CSR["Solucionadores CSR Leontief, Trabalho Jacobi e Harmonia de Cockshott"]
-    CSR --> Directive["CompulsoryAllocationDirective (Difundida a Todos os Conselhos)"]
+    DRBG --> Mesh["Malha Escalonada de 4 Níveis e Rotação do Júri Popular"]
+    DRBG --> Roles["Sub-Sorteio de Secretário-Geral e Câmaras (Defesa = 100% Civil)"]
+    Pleb["Plebiscito Macroeconômico Fechado (Cédulas Cegadas)"] --> CSR["CSR Leontief, Cotas de Trabalho Jacobi e Harmonia de Cockshott"]
+    CSR --> Directive["Diretriz Compulsória de Alocação + Feedback de Carbono"]
     Directive --> Mesh
-    Ent["SocialistEnterprise (Bitmask de Propriedade 8, Zero CEOs)"] --> GCD["Partilha Racional 1/N por MDC em Dias Inteiros"]
+    Ent["SocialistEnterprise (Bitmask 8, Zero CEOs)"] --> GCD["Partilha Racional 1/N por MDC em Dias Inteiros"]
     Mandate["MandateProtectionManager (Paridade IPCA e Trava >=180 Dias)"] <--> Ent
+    SEEM["NationalSimulationEngine (150,7M Cidadãos, Regimes CRN A/B/C)"] <--> Mesh
 ```
-O diagrama mostra cada componente principal, suas garantias criptográficas e o fluxo de dados do cadastro cidadão até a diretiva de alocação.
 
 ---
 
-## 2. Sorteio Criptográfico e Quarentena Demárquica ([`sortition.py`](../../src/cibersoc/sortition.py))
+## 2. Sorteio Criptográfico, Quarentena e Habilitação Cívica ([`sortition.py`](../../src/cibersoc/sortition.py), [`civic_exam.py`](../../src/cibersoc/civic_exam.py))
 
 ### 2.1 Árvore Binária Determinística de Merkle (`compute_merkle_root`)
-Dado o conjunto de identificadores elegíveis $E_t$ para o ciclo $t$:
-1. Os identificadores são deduplicados e ordenados lexicograficamente: $(c_1 < c_2 < \dots < c_m)$. Se $E_t = \emptyset$, retorna-se $\text{SHA256}(\texttt{"EMPTY\_ELIGIBLE\_POOL"})$.
-2. As folhas são calculadas por $h_{0,k} = \text{SHA256}(c_k)$.
-3. Em cada nível da árvore, caso a lista possua cardinalidade ímpar, duplica-se o último *digest*; pares adjacentes são concatenados e reduzidos via $h_{\ell+1, j} = \text{SHA256}(h_{\ell, 2j} \parallel h_{\ell, 2j+1})$ até restar uma única raiz hexadecimal de 256 bits $R_{\text{Merkle}}$. Qualquer inclusão, omissão ou troca de um único cidadão altera $R_{\text{Merkle}}$ com probabilidade $1 - 2^{-256}$.
+1. Deduplica e ordena lexicograficamente os identificadores elegíveis $c_1 < c_2 < \dots < c_m$ (urna vazia retorna `SHA256("EMPTY_ELIGIBLE_POOL")`).
+2. Calcula as folhas $h_{0,k} = \text{SHA256}(c_k)$ e reduz pares adjacentes até uma única raiz de 256 bits $R_{\text{Merkle}}$.
 
-### 2.2 Protocolo Multifonte Commit-Reveal (`CommitRevealEntropyBeacon`)
-Para impedir que qualquer autoridade isolada manipule a seleção aleatória:
-1. **Fase de Compromisso (*Commit*):** Ao menos $M \ge 2$ (padrão $M = 3$) instituições independentes publicam compromissos $C_s = \text{SHA256}(\text{seed}_s \parallel \texttt{"||"} \parallel \text{nonce}_s)$ antes do travamento (`_is_locked = True`).
-2. **Fase de Revelação (*Reveal*):** Após o travamento, cada fonte revela $(\text{seed}_s, \text{nonce}_s)$, validados em tempo constante por `hmac.compare_digest` contra ataques temporais (*timing attacks*).
-3. **Derivação da Semente Mestra:** As fontes são ordenadas por `source_id` e combinadas ao escopo, ciclo e raiz de Merkle:
-   $$S_{\text{master}} = \text{SHA256}\left(\texttt{"CIBERSOC\_SORTITION\_V2|"} \parallel \text{scope} \parallel \texttt{"|"} \parallel t \parallel \texttt{"|"} \parallel R_{\text{Merkle}} \parallel \big\|_{s} (\texttt{"|"} \parallel s \parallel \texttt{":"} \parallel \text{seed}_s \parallel \texttt{":"} \parallel \text{nonce}_s)\right)$$
-   Vincular $R_{\text{Merkle}}$ dentro de $S_{\text{master}}$ torna matematicamente impossível adulterar a lista de cidadãos elegíveis *após* observar os compromissos de entropia.
+### 2.2 Protocolo Multifonte Commit–Reveal (`CommitRevealEntropyBeacon`)
+1. **Commit:** $M \ge 2$ fontes independentes publicam $C_s = \text{SHA256}(\text{seed}_s \parallel \texttt{"||"} \parallel \text{nonce}_s)$ antes do travamento.
+2. **Reveal:** Validado em tempo constante por `hmac.compare_digest`.
+3. **Semente Mestra:** Vincula $R_{\text{Merkle}}$, escopo e ciclo dentro de `SHA256("CIBERSOC_SORTITION_V2|" || scope || "|" || t || "|" || R_Merkle || ...)`, impedindo adulteração pós-compromisso.
 
-### 2.3 DRBG em Modo Contador Sem Viés de Módulo (`CounterModeHmacDrbg`)
-A redução modular ingênua (`rand64() % B`) introduz viés estatístico sempre que $B$ não divide $2^{64}$. `CounterModeHmacDrbg` extrai inteiros de 64 bits dos primeiros 8 bytes de $\text{HMAC-SHA256}(K = S_{\text{master}}, \text{counter}_{64\text{-be}})$ e calcula o limiar exato de rejeição:
-$$L = 2^{64} - (2^{64} \bmod B)$$
-Candidatos $u \ge L$ são descartados; candidatos aceitos $u < L$ possuem distribuição **estritamente uniforme** sobre $\{0, 1, \dots, B-1\}$. `sample_without_replacement` executa embaralhamento parcial determinístico de Fisher–Yates sobre o estrato ordenado em $O(k)$ permutações.
-
-### 2.4 Estratificação Proporcional (`allocate_proportional_hamilton_quotas`)
-Dados estratos demográficos/ocupacionais não vazios com populações $P_s > 0$ ($\sum_s P_s = P_{\text{total}}$) e $S \le P_{\text{total}}$ assentos:
-1. Calculam-se cotas inteiras inferiores e restos exatos sem ponto flutuante:
-   $$q_s^{\text{floor}} = \left\lfloor \frac{P_s \cdot S}{P_{\text{total}}} \right\rfloor, \qquad r_s = (P_s \cdot S) \bmod P_{\text{total}}$$
-2. Estratos vazios ($P_s = 0$) são excluídos do desempate de sobras para jamais receberem assento.
-3. Os $S - \sum_s q_s^{\text{floor}}$ assentos restantes são atribuídos por ordem decrescente de $(-r_s, s)$. Como $q_s^{\text{floor}} \le P_s - 1$ sempre que $S < P_{\text{total}}$ e $P_s \ge 1$, a cota resultante satisfaz $q_s \le P_s$ incondicionalmente.
-
-### 2.5 Quarentena Compulsória e Sub-Sorteio de Funções com Supremacia Civil
-* **Invariante de Quarentena:** Em `register_mandate_completion(citizen_ids, completed_cycle=t)`, cada conselheiro cessante é removido de `_serving_councillor_ids` e gravado em `_quarantined_until_cycle[cid] = max(prev, t + cooldown_cycles)`. `is_eligible(cid, t')` retorna `False` para todo $t' \le t + \text{cooldown\_cycles}$, garantindo $C_t \cap C_{t+1} = \emptyset$.
-* **Sub-Sorteio Interno (`assign_internal_roles`):** Deriva a semente secundária $\text{SHA256}(\texttt{"INTERNAL\_ROLES|"} \parallel S_{\text{master}})$, embaralha os sorteados, designa o índice `0` como `SecretaryGeneral` logístico, filtra primeiro `not is_military_personnel` ao prover `MinistryPortfolio.DEFENCE` (disparando `CivilianSupremacyViolationError` caso inexistam civis), distribui os titulares das demais seis pastas e redireciona eventuais militares remanescentes para fora da Defesa rumo a pastas técnicas civis.
-* **Verificação Pública Zero-Trust (`verify_audit_proof`):** Revalida independentemente (1) unicidade dos elegíveis, (2) seleção limitada não vazia, (3) $\ge 2$ compromissos, (4) igualdade da raiz de Merkle, (5) alinhamento exato entre compromissos e revelações, (6) cada *digest* SHA-256 de compromisso, (7) derivação da semente mestra, (8) cotas de Hamilton e (9) reprodução integral do DRBG.
+### 2.3 DRBG por Amostragem com Rejeição e Cotas de Hamilton
+- **`CounterModeHmacDrbg`:** Extrai blocos de 64 bits de `HMAC-SHA256(S_master, counter_be)` e descarta valores $\ge 2^{64} - (2^{64} \bmod B)$, garantindo distribuição estritamente uniforme sem viés de módulo.
+- **`allocate_proportional_hamilton_quotas`:** Calcula cotas inteiras $\lfloor P_s S / P_{\text{total}} \rfloor$ e distribui sobras por $(-r_s, s)$ sem ponto flutuante.
+- **Quarentena Compulsória e Exame Cívico (`CivicExamScheduler`):** Conselheiros cessantes ingressam em `_quarantined_until_cycle` ($C_t \cap C_{t+1} = \emptyset$). `CitizenExamRecord` avalia primeiro a isenção estatutária por idade ($\ge 60$ anos mesmo sem provas anteriores) e acompanha habilitação regular (`>= 60%`) e qualificação para auditoria técnica (`>= 70%`).
 
 ---
 
-## 3. Malha de Conselhos e Trava Civil Multi-Assinatura ([`councils.py`](../../src/cibersoc/councils.py))
+## 3. Malha de Conselhos, Rotação do Júri Popular e Trava Civil ([`councils.py`](../../src/cibersoc/councils.py))
 
-* **Topologia Escalonada:** `EscalatedCouncilMesh.EXPECTED_PARENT_TIER` impõe `SECTORAL -> MUNICIPAL -> STATE -> FEDERAL -> None` e proíbe `MinistryPortfolio.DEFENCE` fora da esfera `FEDERAL`.
-* **Proporcionalidade Federativa de Vagas (`FederatedSeatProportionality`):** Modela a composição analítica dos conselhos com paridade direta $N_{\text{municipal}} = \lambda_{\text{mun}} \sum_{s \in \mathcal{S}(M)} N(s)$ ($\lambda_{\text{mun}} = 1.0$, $20$ vagas em Curitiba estritamente proporcionais aos $10 + 10 = 20$ conselheiros setoriais de Boqueirão e Matriz). Garante bancada de $4$ jurados na Justiça (assegurando quórum de $\ge 3$ no júri popular) e limita a câmara a $20$ membros para preservar a eficiência deliberativa e evitar a exaustão da quarentena na população.
-* **`SecretaryGeneral` Logístico:** `order_meeting_agenda` ordena deterministicamente por `(-urgency_level, submission_sequence, item_id)`. `authenticate_resolution` confere se todos os votantes pertencem a `valid_member_ids` e se `votes_in_favour >= (N // 2) + 1` antes de emitir o hash SHA-256 da resolução; `attempt_veto` e `attempt_unilateral_decree` lançam incondicionalmente `AutocraticActForbiddenError`.
-* **`CivilianMilitaryCommandGate`:** Rejeita qualquer ministro militar ou membro militar na Câmara de Defesa já na instanciação. `issue_strategic_order` exige: (a) general cadastrado, (b) assinatura do ministro civil sorteado, (c) certificação de ata pelo Secretário-Geral Federal e (d) aprovação de ao menos $\max(1, \lfloor (2|D| + 2)/3 \rfloor) = \lceil \frac{2}{3}|D| \rceil$ civis sorteados da Câmara de Defesa.
+- **Topologia Escalonada e Proporcionalidade:** `EscalatedCouncilMesh` impõe `SECTORAL -> MUNICIPAL -> STATE -> FEDERAL -> None` e restringe `DEFENCE` à esfera Federal. `FederatedSeatProportionality` mantém paridade $1:1$ municipal/setorial (`20 = 10 + 10`).
+- **`SecretaryGeneral` Logístico:** Impõe `self.voting_weight == 1` em `authenticate_resolution` e bloqueia qualquer tentativa de veto ou decreto (`AutocraticActForbiddenError`).
+- **Rotação Determinística da Bancada Ímpar do Júri Popular:** Quando a Câmara de Justiça possui número par de cidadãos sorteados (ex.: `4`), `active_popular_jury_bench(case_id)` deriva uma semente `CounterModeHmacDrbg` de `(council_id, cycle, case_id)` para alternar imparcialmente o suplente excluído, compondo bancada ímpar e vedando substituição por juiz de carreira (`JudicialOligarchyForbiddenError`).
+- **`CivilianMilitaryCommandGate`:** Exige general cadastrado, assinatura do ministro civil sorteado, certificação do Secretário-Geral Federal e $\ge \lceil 2/3 \cdot |D| \rceil$ coassinaturas civis na Câmara de Defesa.
 
 ---
 
 ## 4. Contabilidade Empresarial Racional em Ponto Fixo ([`enterprise.py`](../../src/cibersoc/enterprise.py))
 
-1. **Máscara de Bits de Propriedade:** `PropertyRightsBitmask.state_code` avalia `(use << 3) | (sell << 2) | (buy << 1) | inherit`. Apenas `[True, False, False, False]` (`8`) satisfaz `assert_socialist_productive_unit()`.
-2. **Divisão Racional Exata por Dias Inteiros:** Ponto flutuante e divisões decimais intermediárias ingênuas (`Decimal(d_w) / Decimal(D)`) sofrem deriva por dízimas periódicas truncadas (ex.: $7 \times \text{Decimal}(1)/\text{Decimal}(7) = 1.0000000000000000000000000003 > 1$). `SocialistEnterprise.distribute_period_profit` elimina arredondamentos intermediários somando dias inteiros trabalhados $T = \sum_{w} d_w$, simplificando cada fração por $g_w = \gcd(d_w, T)$ e quantizando uma única vez ao final com `ROUND_DOWN`:
-   $$s_w = \left\lfloor \frac{\Pi_{\text{net}} \cdot (d_w / g_w)}{T / g_w} \right\rfloor_{0.01}, \qquad r_{\text{next}} = \Pi_{\text{net}} - \sum_{w} s_w$$
-   Como $\sum_w \frac{d_w}{T} = 1$ identicamente em $\mathbb{Q}$, vale $0.00 \le r_{\text{next}} < N_{\text{active}} \times 0.01$ como invariante estrita, e o lucro retido pela empresa é identicamente `Decimal("0.00")`.
+1. **Máscara de Bits de Usufruto:** `PropertyRightsBitmask` admite exclusivamente `[Use=True, Sell=False, Buy=False, Inherit=False]` (`state_code = 8`).
+2. **Divisão Racional Exata por Dias Inteiros:** `distribute_period_profit` soma dias inteiros trabalhados $T = \sum_w d_w$, reduz cada fração por $g_w = \gcd(d_w, T)$ e quantiza uma única vez com `ROUND_DOWN`:
+   $$s_w = \left\lfloor \frac{\Pi_{\text{net}} \cdot (d_w / g_w)}{T / g_w} \right\rfloor_{0.01}, \qquad r_{\text{next}} = \Pi_{\text{net}} - \sum_w s_w$$
+   cumprindo $0 \le r_{\text{next}} < N_{\text{active}} \cdot 0{,}01$ e mantendo retenção corporativa identicamente `Decimal("0.00")`.
 
 ---
 
-## 5. Matriz Esparsa Insumo-Produto, Valores-Trabalho e Harmonia ([`cybernetics.py`](../../src/cibersoc/cybernetics.py))
+## 5. Solucionadores Esparsos Leontief–Cockshott e Conservação de Cotas de Trabalho ([`cybernetics.py`](../../src/cibersoc/cybernetics.py))
 
-1. **`CompressedSparseRowMatrix`:** Armazena somente coeficientes técnicos não nulos ($|a_{ij}| > 10^{-15}$) em três vetores contíguos (`values`, `column_indices`, `row_pointers`), executando multiplicação coluna $\mathbf{A}\mathbf{x}$ e linha $\mathbf{H}\mathbf{A}$ em tempo $O(\text{nnz}(\mathbf{A}))$.
-2. **Condição Espectral de Hawkins–Simon:** `estimate_spectral_radius` aplica iteração de potência normalizada para atestar $\rho(\mathbf{A}) < 1$, garantindo que $(\mathbf{I}-\mathbf{A})^{-1} = \sum_{k=0}^{\infty} \mathbf{A}^k \ge \mathbf{0}$ existe e é não negativa.
-3. **Produção Bruta Gauss–Seidel e Trabalho Incorporado Jacobi:**
-   * `solve_leontief_gross_output_gauss_seidel` itera $x_i^{(k+1)} = y_i + \sum_{j < i} a_{ij} x_j^{(k+1)} + \sum_{j \ge i} a_{ij} x_j^{(k)}$ até variação relativa $< 10^{-8}$.
-   * `compute_embedded_labour_hours_jacobi` itera $\mathbf{H}^{(k+1)} = \mathbf{l} + \mathbf{H}^{(k)}\mathbf{A}$, cumprindo a identidade de conservação de Marx–Leontief–Cockshott $\mathbf{H} \cdot \mathbf{y} \equiv \mathbf{l} \cdot \mathbf{x}$.
-4. **Relaxação de Harmonia de Curto Prazo (`relax_short_run_capacity_harmony`):** Escala a produção inicial para a caixa viável $[\mathbf{0}, \mathbf{x}_{\max}]$ e ajusta iterativamente $x_i$ proporcionalmente a $(\bar{H} - H(u_i))$ com recozimento linear e trava de produto líquido não negativo $x_i \ge (\mathbf{A}\mathbf{x})_i$.
-5. **Urna Cegada Resistente a Coação:** `cast_anonymous_ballot` projeta `unlinkable_voter_token` em `blinded_slot = SHA256(plebiscite_id || "||" || token)`, permitindo que o cidadão sob coação sobrescreva em segredo seu voto anterior preservando a unicidade da apuração.
+1. **Matriz Esparsa CSR e Condição de Hawkins–Simon:** `CompressedSparseRowMatrix` calcula $\mathbf{A}\mathbf{x}$ e $\mathbf{H}\mathbf{A}$ em $O(\text{nnz}(\mathbf{A}))$; `estimate_spectral_radius` atesta $\rho(\mathbf{A}) < 1$.
+2. **Derivação da Demanda por Cotas de Trabalho:** `derive_final_demand_from_labour_shares` projeta as cotas votadas $s_j$ ($\sum_j s_j = 100$) e os valores-trabalho de Jacobi $\mathbf{H}$ em $y_j^* = \frac{(s_j / 100) L_{\text{total}}}{H_j}$, garantindo que `compute_embedded_labour_shares_pct(y*, H)` recupere $s_j$ identicamente e que $\mathbf{H}\cdot\mathbf{y}^* \equiv \mathbf{l}\cdot\mathbf{x}$.
+3. **Relaxação de Harmonia e Fronteira de Carbono:** `relax_short_run_capacity_harmony` equilibra a Harmonia assimétrica de Cockshott em $[\mathbf{0}, \mathbf{x}_{\max}]$, enquanto `InteractiveCyberneticPlanState.iterate_plan_adjustment` ajusta metas por escoamento e impõe o teto ecológico de carbono.
 
 ---
 
-## 6. `i18n` Reativa e Verificação de Clean Code ([`translator.py`](../../src/cibersoc/i18n/translator.py), [`audit.py`](../../src/cibersoc/audit.py))
+## 6. Motor Contrafactual SEEM por Números Aleatórios Comuns ([`simulation/engine.py`](../../src/cibersoc/simulation/engine.py))
 
-* **`LocalizationCatalog`:** Carrega `en_GB.json`, `pt.json` e `es.json` na inicialização, impõe igualdade estrita de conjuntos de chaves entre os três idiomas em `_verify_key_symmetry` e notifica os ouvintes da UI em `switch_locale`.
-* **`audit_clean_code_compliance`:** Inspeciona todos os arquivos `.py` do repositório pelo analisador léxico padrão `tokenize` (rejeitando qualquer token `tokenize.COMMENT`) e pela árvore sintática `ast.parse` (rejeitando qualquer docstring `ast.Expr(ast.Constant(str))` em módulos, classes ou funções), assegurando código-fonte 100% autoexplicativo sem muletas textuais.
+- **150,7 Milhões de Cidadãos e Corredores Inter-Regionais:** Modela 10 polos macrorregionais brasileiros conectados por fluxos insumo-produto (`INTER_REGIONAL_CORRIDORS`), sorteio criptográfico `CounterModeHmacDrbg` de conselheiros regionais (`CouncillorSlot`) com quarentena pós-mandato e mitigação setorial de choques (`PORTFOLIO_EVENT_CATEGORIES`).
+- **Regimes Institucionais sob CRN:** `NationalSimulationEngine` evolui **(A) `CIBERSOC_DEMARCHY`**, **(B) `ELECTORAL_OLIGARCHY`** e **(C) `BUREAUCRATIC_CENTRALISM`** sob a mesma sequência de choques exógenos (`compare_regimes()`), isolando diferenças estruturais em IDH, convergência do índice de Gini e resiliência do emprego.
 
 ---
 
-## 7. Síntese de Referência Rápida
-- **Criptografia determinística** garante que o conjunto de elegíveis não pode ser adulterado após os compromissos de entropia.
-- **DRBG sem viés** fornece amostragem aleatória uniforme para a sorteio.
-- **Cotas de Hamilton** alocam vagas proporcionalmente sem erros de ponto flutuante.
-- **Quarentena** garante que nenhum conselheiro sirva em dois ciclos consecutivos.
-- **Excedente empresarial** é dividido com exatidão usando aritmética racional de dias inteiros.
-- **Solucionadores de Leontief e Harmonia** executam em tempo $O(\text{nnz})$ esparso com convergência comprovável.
-- **`i18n`** é comutada ao vivo com custo zero de reinicialização.
-- **Auditoria de Clean Code** garante código-fonte sem comentários nem docstrings como invariante do projeto.
+## 7. `i18n` Reativa, Diagramas Mermaid e Auditoria de Clean Code (`translator.py`, `markdown_renderer.py`, `audit.py`)
 
-*Todos os mecanismos acima operam em conjunto para fornecer uma plataforma de simulação matematicamente comprovável, transparente e socialmente equitativa.*
+- **`LocalizationCatalog`:** Impõe igualdade estrita de chaves entre `en_GB.json`, `pt.json` e `es.json`.
+- **`markdown_renderer.py`:** Converte blocos `mermaid` em fluxogramas HTML estilizados dentro do `QTextBrowser`.
+- **`audit_clean_code_compliance`:** Inspeciona todos os arquivos `.py` via `tokenize` e `ast.parse`, exigindo zero comentários `#` e zero docstrings em todo o repositório.

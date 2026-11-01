@@ -5,11 +5,10 @@ from pathlib import Path
 
 import pytest
 from PySide6.QtCore import QRectF, QSettings, QUrl, Qt
-from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
-    QFileDialog,
+    QDialog,
     QLabel,
     QPlainTextEdit,
     QPushButton,
@@ -18,7 +17,6 @@ from PySide6.QtWidgets import (
 from pytestqt.qtbot import QtBot
 
 from cibersoc.i18n.translator import LocalizationCatalog, SupportedLocale
-from cibersoc.ui import main_window as main_window_module
 from cibersoc.ui.main_window import (
     FONT_SETTINGS_KEY,
     CiberSocMainWindow,
@@ -31,6 +29,8 @@ from cibersoc.ui.theme import (
     DEFAULT_PALETTE,
     MAX_FONT_POINTS,
     MIN_FONT_POINTS,
+    ConstructivistEspressoPalette,
+    build_constructivist_espresso_stylesheet,
     build_dark_cappuccino_stylesheet,
     clamp_font_points,
     font_scale_factor,
@@ -48,6 +48,9 @@ def _create_window(qtbot: QtBot, **kwargs: object) -> CiberSocMainWindow:
 
 def test_theme_never_emits_font_sizes_below_twelve_points() -> None:
     assert MIN_FONT_POINTS == 12
+    espresso_palette = ConstructivistEspressoPalette()
+    espresso_css = build_constructivist_espresso_stylesheet(espresso_palette, 15)
+    assert espresso_palette.bg_espresso_deep in espresso_css
     for requested in (-5, 0, 8, 11, 12, 15, 32, 99):
         stylesheet = build_dark_cappuccino_stylesheet(DEFAULT_PALETTE, requested)
         sizes = [int(size) for size in re.findall(r"font-size: (\d+)pt", stylesheet)]
@@ -256,6 +259,7 @@ def test_readme_and_documentation_tab_viewer_and_navigation(qtbot: QtBot) -> Non
 
     window = _create_window(qtbot)
     assert window.tabs.count() == 6
+    assert "Mesh" in window.grp_mesh.title() and "&" in window.grp_jury_security.title()
     assert window.tabs.tabText(5) == "6. Nation Simulation — SEEM Engine"
 
     window.tabs.setCurrentIndex(5)
@@ -319,68 +323,59 @@ def test_readme_and_documentation_tab_viewer_and_navigation(qtbot: QtBot) -> Non
 
 
 def test_shortcuts_dialog_and_tab_navigation(qtbot: QtBot) -> None:
-    from PySide6.QtWidgets import QDialog
+    presented_dialogs: list[QDialog] = []
 
-    window = _create_window(qtbot)
-    orig_exec = QDialog.exec
-    dialog_opened = False
-
-    def fake_exec(self: QDialog) -> int:
-        nonlocal dialog_opened
-        dialog_opened = True
+    def capture_dialog(dlg: QDialog) -> int:
+        presented_dialogs.append(dlg)
         return 0
 
-    QDialog.exec = fake_exec
-    try:
-        window._show_shortcuts_dialog()
-        assert dialog_opened is True
-    finally:
-        QDialog.exec = orig_exec
+    window = _create_window(qtbot, dialog_presenter=capture_dialog)
+    window._show_shortcuts_dialog()
+    assert len(presented_dialogs) == 1
+    assert presented_dialogs[0].windowTitle() != ""
 
 
 def test_open_readme_and_export_fullhd_wallpaper(qtbot: QtBot, tmp_path: Path) -> None:
-    window = _create_window(qtbot)
-    opened_urls: list[str] = []
-    orig_open = QDesktopServices.openUrl
+    headless_win = _create_window(qtbot)
+    assert headless_win._open_file_in_desktop(tmp_path / "dummy.png") is False
 
-    def fake_open_url(url: QUrl | str, /) -> bool:
-        opened_urls.append(str(url))
+    opened_urls: list[str] = []
+    dialog_responses: list[tuple[str, str]] = [
+        ("", ""),
+        (str(tmp_path / "custom_wallpaper.png"), "PNG Images (*.png)"),
+    ]
+
+    def record_url(url: QUrl) -> bool:
+        opened_urls.append(url.toString())
         return True
 
-    setattr(QDesktopServices, "openUrl", fake_open_url)
-    try:
-        window.btn_open_readme.click()
-        assert window.cmb_doc_selector.currentData() == "README.md"
-        assert "CIBERSOC" in window.txt_readme_browser.toPlainText()
+    def next_save_choice(*_args: object, **_kwargs: object) -> tuple[str, str]:
+        return dialog_responses.pop(0)
 
-        assert window._open_file_in_desktop(tmp_path / "dummy.png") is False
+    desktop_win = _create_window(
+        qtbot,
+        url_opener=record_url,
+        save_file_dialog=next_save_choice,
+        headless_detector=lambda: False,
+    )
+    desktop_win.btn_open_readme.click()
+    assert desktop_win.cmb_doc_selector.currentData() == "README.md"
+    assert "CIBERSOC" in desktop_win.txt_readme_browser.toPlainText()
+    assert any("README.md" in u for u in opened_urls)
 
-        window._is_headless_execution = lambda: False
-        window._open_file_in_desktop(tmp_path / "dummy.png")
-        assert any("dummy.png" in u for u in opened_urls)
+    assert desktop_win._open_file_in_desktop(tmp_path / "dummy.png") is True
+    assert any("dummy.png" in u for u in opened_urls)
 
-        orig_get_save = QFileDialog.getSaveFileName
-        try:
-            setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *args, **kwargs: ("", "")))
-            initial_count = len(window.orchestrator.audit_events)
-            window._on_export_fullhd_wallpaper()
-            assert len(window.orchestrator.audit_events) == initial_count
+    initial_count = len(desktop_win.orchestrator.audit_events)
+    desktop_win._on_export_fullhd_wallpaper()
+    assert len(desktop_win.orchestrator.audit_events) == initial_count
 
-            custom_dest = tmp_path / "custom_wallpaper.png"
-            setattr(
-                QFileDialog,
-                "getSaveFileName",
-                staticmethod(lambda *args, **kwargs: (str(custom_dest), "PNG Images (*.png)")),
-            )
-            window._on_export_fullhd_wallpaper()
-            assert custom_dest.is_file()
-            assert custom_dest.stat().st_size > 0
-            last_event = window.orchestrator.audit_events[-1]
-            assert last_event.message_key == "log.fullhd_wallpaper_exported"
-            assert last_event.parameters["path"] == str(custom_dest.resolve())
-        finally:
-            setattr(QFileDialog, "getSaveFileName", orig_get_save)
-    finally:
-        setattr(QDesktopServices, "openUrl", orig_open)
+    custom_dest = tmp_path / "custom_wallpaper.png"
+    desktop_win._on_export_fullhd_wallpaper()
+    assert custom_dest.is_file()
+    assert custom_dest.stat().st_size > 0
+    last_event = desktop_win.orchestrator.audit_events[-1]
+    assert last_event.message_key == "log.fullhd_wallpaper_exported"
+    assert last_event.parameters["path"] == str(custom_dest.resolve())
 
 

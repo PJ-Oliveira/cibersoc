@@ -37,6 +37,7 @@ _TEXT_EXTENSIONS: frozenset[str] = frozenset(
         ".json",
         ".yaml",
         ".yml",
+        ".html",
         "",
     }
 )
@@ -45,6 +46,7 @@ _REQUIRED_RELATIVE_PATHS: tuple[str, ...] = (
     "README.md",
     "LICENSE",
     "pyproject.toml",
+    "docs/demo/index.html",
     "docs/en-GB/01_THEORETICAL_FOUNDATIONS_AND_LOGICAL_DEFENCE.md",
     "docs/en-GB/02_UI_GUIDE.md",
     "docs/en-GB/03_SIMULATOR_OPERATION_MANUAL.md",

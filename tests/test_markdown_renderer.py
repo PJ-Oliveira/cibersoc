@@ -9,6 +9,7 @@ from cibersoc.ui.markdown_renderer import (
     render_latex_math,
     render_markdown_table,
     render_markdown_to_html,
+    render_mermaid_diagram,
     resolve_html_images,
 )
 
@@ -259,3 +260,23 @@ def test_resolve_html_images_and_markdown_badges() -> None:
     missing_md = "Here is ![Missing](assets/nonexistent_relative_file.png)"
     rendered_missing = render_inline_markdown(missing_md, project_root=project_root)
     assert '<img src="assets/nonexistent_relative_file.png" alt="Missing"/>' in rendered_missing
+
+
+def test_mermaid_diagram_rendering_and_fenced_blocks() -> None:
+    mermaid_md = (
+        "```mermaid\n"
+        "flowchart TD\n"
+        '    A["Citizen Pool"] -->|Commit-Reveal| B("Sorted Council");\n'
+        "    B --> C;\n"
+        "```\n"
+    )
+    rendered_html = render_markdown_to_html(mermaid_md)
+    assert '<div class="mermaid-diagram">' in rendered_html
+    assert "Citizen Pool" in rendered_html
+    assert "→ Commit-Reveal →" in rendered_html
+    assert "Sorted Council" in rendered_html
+    assert '<span class="mermaid-node">C</span>' in rendered_html
+
+    fallback_html = render_mermaid_diagram(["stateDiagram-v2", "IdleState", ""])
+    assert '<div class="mermaid-diagram">' in fallback_html
+    assert "IdleState" in fallback_html

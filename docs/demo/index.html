@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CIBERSOC — Interactive Computational Governance &amp; Input-Output Laboratory</title>
+<style>
+:root {
+  --bg-deep: #16110E;
+  --bg-panel: #1F1814;
+  --bg-card: #29201B;
+  --bg-elevated: #362A23;
+  --border: #4A3930;
+  --ivory: #F4EAD8;
+  --cream: #D7C5B0;
+  --muted: #A58F7B;
+  --amber: #C89B6D;
+  --amber-hi: #DFB589;
+  --sage: #84A97C;
+  --terra: #C26653;
+  --sky: #6D9BC8;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg-deep);
+  color: var(--ivory);
+  font-family: "Atkinson Hyperlegible", "Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.55;
+  padding-bottom: 48px;
+}
+header {
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  padding: 18px 28px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.brand h1 {
+  font-size: 1.25rem;
+  letter-spacing: 0.6px;
+  color: var(--ivory);
+}
+.brand p {
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+select, button, input[type="number"] {
+  background: var(--bg-card);
+  color: var(--ivory);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 7px 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+button:hover, select:hover {
+  background: var(--bg-elevated);
+  border-color: var(--amber-hi);
+}
+button.primary {
+  background: var(--bg-elevated);
+  border-color: var(--amber);
+}
+.scope-banner {
+  max-width: 1280px;
+  margin: 18px auto 0;
+  padding: 12px 18px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--amber);
+  border-radius: 6px;
+  color: var(--cream);
+  font-size: 0.9rem;
+}
+main {
+  max-width: 1280px;
+  margin: 18px auto;
+  padding: 0 16px;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 18px;
+}
+.card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px;
+}
+.span-12 { grid-column: span 12; }
+.span-6 { grid-column: span 6; }
+@media (max-width: 960px) {
+  .span-6 { grid-column: span 12; }
+}
+.card h2 {
+  color: var(--amber);
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+}
+.card .sub {
+  color: var(--muted);
+  font-size: 0.86rem;
+  margin-bottom: 14px;
+}
+.sim-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .sim-grid { grid-template-columns: 1fr; }
+}
+canvas {
+  width: 100%;
+  background: #120D0A;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: block;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+.kpi {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.kpi .label {
+  font-size: 0.76rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.kpi .value {
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: var(--ivory);
+  margin-top: 2px;
+}
+.kpi .delta {
+  font-size: 0.78rem;
+  color: var(--sage);
+}
+.slider-group {
+  margin-bottom: 10px;
+}
+.slider-group label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.86rem;
+  color: var(--cream);
+  margin-bottom: 3px;
+}
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--amber);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-top: 10px;
+}
+th, td {
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+  text-align: left;
+}
+th {
+  background: var(--bg-elevated);
+  color: var(--amber-hi);
+}
+td {
+  background: var(--bg-card);
+}
+.mono {
+  font-family: Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  color: var(--amber-hi);
+  word-break: break-all;
+}
+footer {
+  max-width: 1280px;
+  margin: 24px auto 0;
+  padding: 12px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1 data-i18n="title">CIBERSOC // CYBERNETIC AND DEMARCHIC GOVERNANCE LABORATORY</h1>
+    <p data-i18n="subtitle">Zero-Install Web Showcase • Statistical Sortition • Leontief-Cockshott Planning • 1/N Cooperative Surplus • SEEM Counterfactuals</p>
+  </div>
+  <div class="header-controls">
+    <label for="lang-select" style="color:var(--cream);font-size:0.88rem;" data-i18n="lang_label">Language:</label>
+    <select id="lang-select">
+      <option value="en-GB">English (UK) — en-GB</option>
+      <option value="pt">Português — pt</option>
+      <option value="es">Español — es</option>
+    </select>
+  </div>
+</header>
+
+<div class="scope-banner" data-i18n="scope_note">
+  Methodological Scope: CIBERSOC is an open-source computational mechanism-design, statistical sortition, and sparse input-output simulation architecture. All scenarios run deterministically in-browser with zero external dependencies.
+</div>
+
+<main>
+  <section class="card span-12">
+    <h2 data-i18n="sim_heading">1. Comparative National SEEM Simulator — Common Random Numbers (CRN)</h2>
+    <p class="sub" data-i18n="sim_sub">Compare CIBERSOC Demarchy (A), Electoral Oligarchy (B), and Bureaucratic Centralism (C) under identical stochastic climate, economic, and social shocks across 10 Brazilian federated poles. Click any state capital on the map to inspect local metrics.</p>
+    <div class="toolbar">
+      <button class="primary" id="btn-step1" data-i18n="btn_step1">+1 Year</button>
+      <button id="btn-step10" data-i18n="btn_step10">+10 Years</button>
+      <button id="btn-reset" data-i18n="btn_reset">Reset</button>
+      <select id="sel-regime">
+        <option value="A">A. CIBERSOC Demarchy (Sortition + 1/N)</option>
+        <option value="B">B. Electoral Oligarchy (Parties + CEOs)</option>
+        <option value="C">C. Bureaucratic Centralism (Top-Down)</option>
+      </select>
+      <select id="sel-scenario">
+        <option value="BASELINE">Scenario: Baseline</option>
+        <option value="ECOLOGICAL_STRESS">Scenario: Ecological Stress</option>
+        <option value="POST_CRISIS">Scenario: Post-Crisis Equalisation</option>
+      </select>
+    </div>
+    <div class="sim-grid">
+      <div>
+        <canvas id="map-canvas" width="660" height="430"></canvas>
+      </div>
+      <div>
+        <div class="kpi-row">
+          <div class="kpi"><div class="label" data-i18n="kpi_year">Year / Drawn</div><div class="value" id="k-year">1 / 0</div><div class="delta" id="k-pop">150.7M Pop</div></div>
+          <div class="kpi"><div class="label">HDI (Active)</div><div class="value" id="k-hdi">—</div><div class="delta" id="k-dhdi">CRN vs B: —</div></div>
+          <div class="kpi"><div class="label">GINI (Active)</div><div class="value" id="k-gini">—</div><div class="delta" id="k-dgini">CRN vs B: —</div></div>
+          <div class="kpi"><div class="label" data-i18n="kpi_emp">Employment</div><div class="value" id="k-emp">—</div><div class="delta" id="k-reg">BR-SP selected</div></div>
+        </div>
+        <canvas id="chart-canvas" width="520" height="210"></canvas>
+        <div id="region-detail" style="margin-top:10px;padding:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;font-size:0.86rem;color:var(--cream);"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card span-6">
+    <h2 data-i18n="hoeff_heading">2. Hoeffding Sortition Convergence &amp; Commit-Reveal Beacon</h2>
+    <p class="sub" data-i18n="hoeff_sub">Upper bound on adverse majority capture in an unwhipped sorted chamber of size n with unitary Secretary-General vote weight.</p>
+    <div class="slider-group">
+      <label><span data-i18n="lbl_chamber">Council Seats (n):</span><strong id="val-n">501</strong></label>
+      <input type="range" id="rng-n" min="21" max="1501" step="10" value="501">
+    </div>
+    <div class="slider-group">
+      <label><span data-i18n="lbl_benev">Civic Good-Faith Share (p):</span><strong id="val-p">0.68</strong></label>
+      <input type="range" id="rng-p" min="0.52" max="0.90" step="0.01" value="0.68">
+    </div>
+    <div class="kpi-row">
+      <div class="kpi"><div class="label">Exponent -2(n-1)(p-0.5)²</div><div class="value" id="k-exp">-64.80</div></div>
+      <div class="kpi"><div class="label">Adverse Majority Bound</div><div class="value" id="k-bound">7.20e-29</div></div>
+    </div>
+    <div style="margin-top:10px;">
+      <button id="btn-reseed" data-i18n="btn_beacon">Generate New Commit-Reveal SHA-256 Seed</button>
+      <p class="mono" id="beacon-out" style="margin-top:8px;"></p>
+    </div>
+  </section>
+
+  <section class="card span-6">
+    <h2 data-i18n="cyber_heading">3. Closed Allocative Plebiscite &amp; Leontief-Cockshott Planner</h2>
+    <p class="sub" data-i18n="cyber_sub">Exact embedded labour conservation (Σ H_j y_j = L_total) with interactive market-clearing feedback (p/v) and physical carbon boundary.</p>
+    <div class="slider-group">
+      <label><span data-i18n="lbl_health_share">Health vs Education Plebiscite Share (% Health):</span><strong id="val-hvote">57%</strong></label>
+      <input type="range" id="rng-hvote" min="10" max="90" step="1" value="57">
+    </div>
+    <div class="slider-group">
+      <label><span data-i18n="lbl_pv">Clearing Price / Labour Value Ratio (p/v):</span><strong id="val-pv">1.08</strong></label>
+      <input type="range" id="rng-pv" min="0.70" max="1.45" step="0.02" value="1.08">
+    </div>
+    <table id="tbl-cyber">
+      <thead>
+        <tr><th>Sector</th><th>Share</th><th>y*</th><th>x = (I-A)⁻¹y*</th><th>Labour H</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <p id="cyber-foot" style="margin-top:8px;font-size:0.85rem;color:var(--sage);"></p>
+  </section>
+
+  <section class="card span-12">
+    <h2 data-i18n="ent_heading">4. Horizontal Cooperative Enterprise — Property Bitmask [1,0,0,0] &amp; 1/N Surplus</h2>
+    <p class="sub" data-i18n="ent_sub">Zero CEOs, zero corporate profit retention, exact integer-cent rational distribution weighted by active working days, and CPI-indexed mandate parity.</p>
+    <div class="toolbar">
+      <label style="font-size:0.88rem;color:var(--cream);">Gross Operating Revenue ($):
+        <input type="number" id="inp-rev" min="120000" max="600000" step="5000" value="185000">
+      </label>
+      <label style="font-size:0.88rem;color:var(--cream);">Mandate Cumulative CPI:
+        <input type="number" id="inp-cpi" min="100" max="160" step="0.5" value="104.5">
+      </label>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi"><div class="label">Property Mask</div><div class="value">1000 (Usus)</div><div class="delta">Fructus/Abusus = 0</div></div>
+      <div class="kpi"><div class="label">Net Surplus</div><div class="value" id="e-net">$ 81,000.00</div><div class="delta">Retained: $ 0.00</div></div>
+      <div class="kpi"><div class="label">Full 30-Day 1/N Share</div><div class="value" id="e-share">$ 10,451.61</div><div class="delta" id="e-carry">Carry: 5 cents</div></div>
+      <div class="kpi"><div class="label">Indexed Councillor Stipend</div><div class="value" id="e-stipend">$ 5,016.00</div><div class="delta">180-Day Job Lock Active</div></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  CIBERSOC v2.1.0 • MIT License • Open Civic &amp; Computational Governance Architecture • Zero External Network Dependencies
+</footer>
+
+<script>
+const I18N = {
+  "en-GB": {
+    title: "CIBERSOC // CYBERNETIC AND DEMARCHIC GOVERNANCE LABORATORY",
+    subtitle: "Zero-Install Web Showcase • Statistical Sortition • Leontief-Cockshott Planning • 1/N Cooperative Surplus • SEEM Counterfactuals",
+    lang_label: "Language:",
+    scope_note: "Methodological Scope: CIBERSOC is an open-source computational mechanism-design, statistical sortition, and sparse input-output simulation architecture. All models run deterministically in-browser with zero external dependencies.",
+    sim_heading: "1. Comparative National SEEM Simulator — Common Random Numbers (CRN)",
+    sim_sub: "Compare CIBERSOC Demarchy (A), Electoral Oligarchy (B), and Bureaucratic Centralism (C) under identical stochastic shocks across 10 Brazilian federated poles. Click any state capital on the map to inspect.",
+    btn_step1: "+1 Year",
+    btn_step10: "+10 Years",
+    btn_reset: "Reset",
+    kpi_year: "Year / Drawn",
+    kpi_emp: "Employment",
+    hoeff_heading: "2. Hoeffding Sortition Convergence & Commit-Reveal Beacon",
+    hoeff_sub: "Upper bound on adverse majority capture in an unwhipped sorted chamber of size n with unitary Secretary-General vote weight.",
+    lbl_chamber: "Council Seats (n):",
+    lbl_benev: "Civic Good-Faith Share (p):",
+    btn_beacon: "Generate New Commit-Reveal SHA-256 Seed",
+    cyber_heading: "3. Closed Allocative Plebiscite & Leontief-Cockshott Planner",
+    cyber_sub: "Exact embedded labour conservation with interactive market-clearing feedback (p/v) and physical carbon boundary.",
+    lbl_health_share: "Health vs Education Ballot (% Health):",
+    lbl_pv: "Clearing Price / Labour Value Ratio (p/v):",
+    ent_heading: "4. Horizontal Cooperative Enterprise — Property Bitmask [1,0,0,0] & 1/N Surplus",
+    ent_sub: "Zero CEOs, zero corporate profit retention, exact integer-cent rational distribution, and CPI-indexed mandate parity."
+  },
+  "pt": {
+    title: "CIBERSOC // LABORATÓRIO DE GOVERNANÇA CIBERNÉTICA E DEMÁRQUICA",
+    subtitle: "Vitrine Web Zero-Install • Sorteio Estatístico • Planejamento Leontief-Cockshott • Excedente Cooperativo 1/N • Contrafactuais SEEM",
+    lang_label: "Idioma:",
+    scope_note: "Escopo Metodológico: O CIBERSOC é uma arquitetura aberta de desenho computacional de mecanismos, sorteio estatístico estratificado e simulação insumo-produto esparsa. Todos os modelos rodam deterministicamente no navegador sem dependências externas.",
+    sim_heading: "1. Simulador Nacional Comparativo SEEM — Números Aleatórios Comuns (CRN)",
+    sim_sub: "Compare a Demarquia CIBERSOC (A), a Oligarquia Eleitoral (B) e o Centralismo Burocrático (C) sob choques estocásticos idênticos em 10 polos federativos brasileiros. Clique em qualquer estado no mapa.",
+    btn_step1: "+1 Ano",
+    btn_step10: "+10 Anos",
+    btn_reset: "Reiniciar",
+    kpi_year: "Ano / Sorteados",
+    kpi_emp: "Emprego",
+    hoeff_heading: "2. Convergência Demárquica de Hoeffding & Farol Commit-Reveal",
+    hoeff_sub: "Cota superior de captura majoritária adversa em câmara sorteada de tamanho n com voto unitário do Secretário-Geral.",
+    lbl_chamber: "Assentos no Conselho (n):",
+    lbl_benev: "Fração Cívica de Boa-Fé (p):",
+    btn_beacon: "Gerar Nova Semente SHA-256 Commit-Reveal",
+    cyber_heading: "3. Plebiscito Alocativo Fechado & Planejador Leontief-Cockshott",
+    cyber_sub: "Conservação exata do trabalho incorporado com feedback de market-clearing (p/v) e teto físico de carbono.",
+    lbl_health_share: "Plebiscito Saúde vs Educação (% Saúde):",
+    lbl_pv: "Razão Preço de Equilíbrio / Valor-Trabalho (p/v):",
+    ent_heading: "4. Empresa Cooperativa Horizontal — Máscara [1,0,0,0] & Excedente 1/N",
+    ent_sub: "Zero CEOs, retenção corporativa zero, partilha racional exata em centavos inteiros e paridade indexada ao IPC."
+  },
+  "es": {
+    title: "CIBERSOC // LABORATORIO DE GOBERNANZA CIBERNÉTICA Y DEMÁRQUICA",
+    subtitle: "Vitrina Web Zero-Install • Sorteo Estadístico • Planificación Leontief-Cockshott • Excedente Cooperativo 1/N • Contrafactuales SEEM",
+    lang_label: "Idioma:",
+    scope_note: "Alcance Metodológico: CIBERSOC es una arquitectura abierta de diseño computacional de mecanismos, sorteo estadístico estratificado y simulación insumo-producto dispersa. Todos los modelos se ejecutan de forma determinista en el navegador sin dependencias externas.",
+    sim_heading: "1. Simulador Nacional Comparativo SEEM — Números Aleatorios Comunes (CRN)",
+    sim_sub: "Compare la Demarquía CIBERSOC (A), la Oligarquía Electoral (B) y el Centralismo Burocrático (C) bajo choques estocásticos idénticos en 10 polos federativos brasileños. Haga clic en cualquier estado del mapa.",
+    btn_step1: "+1 Año",
+    btn_step10: "+10 Años",
+    btn_reset: "Reiniciar",
+    kpi_year: "Año / Sorteados",
+    kpi_emp: "Empleo",
+    hoeff_heading: "2. Convergencia Demárquica de Hoeffding & Faro Commit-Reveal",
+    hoeff_sub: "Cota superior de captura mayoritaria adversa en cámara sorteada de tamaño n con voto unitario del Secretario General.",
+    lbl_chamber: "Escaños del Consejo (n):",
+    lbl_benev: "Fracción Cívica de Buena Fe (p):",
+    btn_beacon: "Generar Nueva Semilla SHA-256 Commit-Reveal",
+    cyber_heading: "3. Plebiscito Asignativo Cerrado & Planificador Leontief-Cockshott",
+    cyber_sub: "Conservación exacta del trabajo incorporado con retroalimentación de vaciado de mercado (p/v) y límite físico de carbono.",
+    lbl_health_share: "Plebiscito Salud vs Educación (% Salud):",
+    lbl_pv: "Razón Precio de Equilibrio / Valor-Trabajo (p/v):",
+    ent_heading: "4. Empresa Cooperativa Horizontal — Máscara [1,0,0,0] & Excedente 1/N",
+    ent_sub: "Cero CEOs, retención corporativa cero, reparto racional exacto en centavos enteros y paridad indexada al IPC."
+  }
+};
+
+const BRAZIL_OUTLINE = [
+  [5.27,-60.20],[4.40,-51.55],[1.80,-49.90],[-0.80,-48.20],[-2.55,-44.30],
+  [-2.90,-40.80],[-3.72,-38.50],[-5.10,-35.20],[-8.05,-34.80],[-10.90,-37.05],
+  [-12.97,-38.50],[-16.40,-39.05],[-20.30,-40.30],[-22.90,-42.00],[-23.00,-43.20],
+  [-24.00,-46.30],[-25.50,-48.50],[-27.60,-48.55],[-30.05,-50.20],[-33.75,-53.40],
+  [-30.90,-55.55],[-29.75,-57.10],[-25.60,-54.60],[-24.05,-54.30],[-22.10,-58.00],
+  [-19.00,-57.65],[-16.30,-58.40],[-13.50,-60.40],[-10.95,-65.35],[-11.00,-69.60],
+  [-9.50,-72.80],[-7.50,-73.98],[-4.20,-69.95],[-1.20,-69.45],[1.70,-67.10],[3.90,-64.20]
+];
+
+const REGIONS_BASE = [
+  {id:"BR-SP",name:"São Paulo",lat:-23.55,lon:-46.63,pop:45000000},
+  {id:"BR-RJ",name:"Rio de Janeiro",lat:-22.91,lon:-43.17,pop:17000000},
+  {id:"BR-MG",name:"Minas Gerais",lat:-19.92,lon:-43.94,pop:21000000},
+  {id:"BR-BA",name:"Bahia",lat:-12.97,lon:-38.50,pop:14000000},
+  {id:"BR-PR",name:"Paraná",lat:-25.42,lon:-49.27,pop:11000000},
+  {id:"BR-RS",name:"Rio Grande do Sul",lat:-30.03,lon:-51.22,pop:11000000},
+  {id:"BR-PE",name:"Pernambuco",lat:-8.05,lon:-34.90,pop:9600000},
+  {id:"BR-CE",name:"Ceará",lat:-3.72,lon:-38.54,pop:9200000},
+  {id:"BR-PA",name:"Pará",lat:-1.46,lon:-48.50,pop:8700000},
+  {id:"BR-AM",name:"Amazonas",lat:-3.10,lon:-60.02,pop:4200000}
+];
+
+const CORRIDORS = [
+  ["BR-SP","BR-RJ"],["BR-SP","BR-MG"],["BR-SP","BR-PR"],["BR-PR","BR-RS"],
+  ["BR-MG","BR-BA"],["BR-BA","BR-PE"],["BR-PE","BR-CE"],["BR-CE","BR-PA"],
+  ["BR-PA","BR-AM"],["BR-SP","BR-PA"]
+];
+
+const REGIME_PARAMS = {
+  A: { targetHdi: 0.85, targetGini: 0.27, targetEmp: 0.92, mit: 0.24, drift: -0.0015, bonus: 0.0032 },
+  B: { targetHdi: 0.70, targetGini: 0.55, targetEmp: 0.77, mit: 0.05, drift: +0.0028, bonus: 0.0005 },
+  C: { targetHdi: 0.75, targetGini: 0.37, targetEmp: 0.86, mit: 0.13, drift: +0.0006, bonus: 0.0016 }
+};
+
+function mulberry32(a) {
+  return function() {
+    let t = a += 0x6D2B79F5;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+let simState = null;
+let selectedRegionId = "BR-SP";
+
+function initSimulation() {
+  const scen = document.getElementById("sel-scenario").value;
+  const rng = mulberry32(42);
+  const initRegs = REGIONS_BASE.map(r => {
+    let hdi = 0.62 + rng() * 0.20;
+    let gini = 0.40 + rng() * 0.16;
+    let emp = 0.74 + rng() * 0.14;
+    if (scen === "ECOLOGICAL_STRESS" && r.lat > -15) { hdi -= 0.07; emp -= 0.05; }
+    if (scen === "POST_CRISIS") { gini = Math.min(0.66, gini + 0.10); emp -= 0.08; }
+    return { ...r, hdi, gini, emp };
+  });
+  simState = {
+    year: 1,
+    drawn: 0,
+    shadows: {
+      A: initRegs.map(x => ({...x})),
+      B: initRegs.map(x => ({...x})),
+      C: initRegs.map(x => ({...x}))
+    },
+    history: []
+  };
+  renderSimulation();
+}
+
+function aggMetrics(regs) {
+  const tot = regs.reduce((s, r) => s + r.pop, 0);
+  return {
+    hdi: regs.reduce((s, r) => s + r.hdi * r.pop, 0) / tot,
+    gini: regs.reduce((s, r) => s + r.gini * r.pop, 0) / tot,
+    emp: regs.reduce((s, r) => s + r.emp * r.pop, 0) / tot
+  };
+}
+
+function stepYear() {
+  const y = simState.year;
+  const rng = mulberry32(42000 + y * 97);
+  const shocks = REGIONS_BASE.map(() => (rng() - 0.43) * 1.4);
+  ["A", "B", "C"].forEach(code => {
+    const p = REGIME_PARAMS[code];
+    simState.shadows[code] = simState.shadows[code].map((r, idx) => {
+      const sh = shocks[idx];
+      const eff = sh < 0 ? sh * (1 - p.mit) : sh * (1 + p.mit);
+      const hdi = Math.max(0.2, Math.min(0.98, r.hdi + eff * 0.012 - (r.hdi - p.targetHdi) * 0.045 + p.bonus));
+      const gini = Math.max(0.15, Math.min(0.85, r.gini - eff * 0.006 - (r.gini - p.targetGini) * 0.045 + p.drift));
+      const emp = Math.max(0.4, Math.min(0.99, r.emp + eff * 0.015 - (r.emp - p.targetEmp) * 0.05));
+      return { ...r, hdi, gini, emp };
+    });
+  });
+  simState.year += 1;
+  simState.drawn += 5;
+  simState.history.push({
+    year: y,
+    A: aggMetrics(simState.shadows.A),
+    B: aggMetrics(simState.shadows.B),
+    C: aggMetrics(simState.shadows.C)
+  });
+}
+
+function proj(lat, lon, w, h) {
+  const x = ((lon - (-75)) / (-33 - (-75))) * (w - 80) + 40;
+  const y = ((6.5 - lat) / (6.5 - (-35))) * (h - 60) + 30;
+  return [x, y];
+}
+
+function renderSimulation() {
+  const activeCode = document.getElementById("sel-regime").value;
+  const regs = simState.shadows[activeCode];
+  const mActive = aggMetrics(regs);
+  const mA = aggMetrics(simState.shadows.A);
+  const mB = aggMetrics(simState.shadows.B);
+
+  document.getElementById("k-year").textContent = simState.year + " / " + simState.drawn;
+  document.getElementById("k-hdi").textContent = mActive.hdi.toFixed(3);
+  document.getElementById("k-gini").textContent = mActive.gini.toFixed(3);
+  document.getElementById("k-emp").textContent = (mActive.emp * 100).toFixed(1) + "%";
+  const dh = mA.hdi - mB.hdi;
+  const dg = mA.gini - mB.gini;
+  document.getElementById("k-dhdi").textContent = "A vs B ΔHDI: " + (dh >= 0 ? "+" : "") + dh.toFixed(3);
+  document.getElementById("k-dgini").textContent = "A vs B ΔGINI: " + (dg >= 0 ? "+" : "") + dg.toFixed(3);
+
+  const cv = document.getElementById("map-canvas");
+  const ctx = cv.getContext("2d");
+  ctx.clearRect(0, 0, cv.width, cv.height);
+
+  ctx.beginPath();
+  BRAZIL_OUTLINE.forEach(([lat, lon], i) => {
+    const [x, y] = proj(lat, lon, cv.width, cv.height);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = "#241B15";
+  ctx.fill();
+  ctx.strokeStyle = "#C89B6D";
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+
+  const byId = Object.fromEntries(regs.map(r => [r.id, r]));
+  CORRIDORS.forEach(([sId, tId]) => {
+    const s = byId[sId], t = byId[tId];
+    const [sx, sy] = proj(s.lat, s.lon, cv.width, cv.height);
+    const [tx, ty] = proj(t.lat, t.lon, cv.width, cv.height);
+    const mx = (sx + tx) / 2, my = (sy + ty) / 2 - 22;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.quadraticCurveTo(mx, my, tx, ty);
+    ctx.strokeStyle = "rgba(223, 181, 137, 0.42)";
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+  });
+
+  regs.forEach(r => {
+    const [x, y] = proj(r.lat, r.lon, cv.width, cv.height);
+    const ringR = 7 + (r.pop / 45000000) * 16;
+    ctx.beginPath();
+    ctx.arc(x, y, ringR, 0, Math.PI * 2);
+    ctx.strokeStyle = r.id === selectedRegionId ? "#F4EAD8" : "rgba(200,155,109,0.65)";
+    ctx.lineWidth = r.id === selectedRegionId ? 2.4 : 1.3;
+    ctx.stroke();
+
+    const barH = 12 + r.hdi * 38;
+    const col = r.hdi >= 0.78 ? "#84A97C" : (r.hdi >= 0.66 ? "#C89B6D" : "#C26653");
+    ctx.fillStyle = col;
+    ctx.fillRect(x - 5, y - barH, 10, barH);
+    ctx.strokeStyle = "#16110E";
+    ctx.strokeRect(x - 5, y - barH, 10, barH);
+
+    ctx.fillStyle = "#F4EAD8";
+    ctx.font = "bold 11px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(r.id.replace("BR-", ""), x, y + ringR + 12);
+    r._screenX = x; r._screenY = y;
+  });
+
+  const sel = byId[selectedRegionId] || regs[0];
+  document.getElementById("k-reg").textContent = sel.id + " selected";
+  document.getElementById("region-detail").innerHTML =
+    "<strong>" + sel.name + " (" + sel.id + ")</strong> — " +
+    "HDI: <b>" + sel.hdi.toFixed(3) + "</b> | GINI: <b>" + sel.gini.toFixed(3) + "</b> | " +
+    "Workforce: <b>" + Math.round(sel.pop * sel.emp).toLocaleString() + "</b> / " + sel.pop.toLocaleString();
+
+  drawCrnChart();
+}
+
+function drawCrnChart() {
+  const cv = document.getElementById("chart-canvas");
+  const ctx = cv.getContext("2d");
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.fillStyle = "#120D0A";
+  ctx.fillRect(0, 0, cv.width, cv.height);
+
+  ctx.fillStyle = "#A58F7B";
+  ctx.font = "11px monospace";
+  ctx.fillText("CRN HDI Trajectories: [Green] A.Demarchy  [Amber] C.Centralism  [Red] B.Oligarchy", 12, 18);
+
+  if (simState.history.length < 2) {
+    ctx.fillStyle = "#7a6a5a";
+    ctx.fillText("Advance +1 or +10 Years to plot Common-Random-Numbers counterfactual trajectories.", 18, 112);
+    return;
+  }
+  const pts = simState.history.slice(-40);
+  const series = [
+    { key: "A", color: "#84A97C" },
+    { key: "C", color: "#C89B6D" },
+    { key: "B", color: "#C26653" }
+  ];
+  series.forEach(s => {
+    ctx.beginPath();
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = 2.2;
+    pts.forEach((pt, idx) => {
+      const x = 18 + (idx / (pts.length - 1)) * (cv.width - 36);
+      const norm = (pt[s.key].hdi - 0.50) / 0.45;
+      const y = cv.height - 20 - Math.max(0, Math.min(1, norm)) * (cv.height - 50);
+      if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  });
+}
+
+document.getElementById("map-canvas").addEventListener("click", evt => {
+  const rect = evt.target.getBoundingClientRect();
+  const scaleX = evt.target.width / rect.width;
+  const scaleY = evt.target.height / rect.height;
+  const mx = (evt.clientX - rect.left) * scaleX;
+  const my = (evt.clientY - rect.top) * scaleY;
+  const regs = simState.shadows[document.getElementById("sel-regime").value];
+  let best = null, bestD = 999;
+  regs.forEach(r => {
+    const d = Math.hypot(mx - r._screenX, my - r._screenY);
+    if (d < bestD) { bestD = d; best = r; }
+  });
+  if (best && bestD < 45) {
+    selectedRegionId = best.id;
+    renderSimulation();
+  }
+});
+
+document.getElementById("btn-step1").addEventListener("click", () => { stepYear(); renderSimulation(); });
+document.getElementById("btn-step10").addEventListener("click", () => { for (let i = 0; i < 10; i++) stepYear(); renderSimulation(); });
+document.getElementById("btn-reset").addEventListener("click", initSimulation);
+document.getElementById("sel-regime").addEventListener("change", renderSimulation);
+document.getElementById("sel-scenario").addEventListener("change", initSimulation);
+
+function updateHoeffding() {
+  const n = Number(document.getElementById("rng-n").value);
+  const p = Number(document.getElementById("rng-p").value);
+  document.getElementById("val-n").textContent = String(n);
+  document.getElementById("val-p").textContent = p.toFixed(2);
+  const exponent = -2 * (n - 1) * Math.pow(p - 0.5, 2);
+  document.getElementById("k-exp").textContent = exponent.toFixed(2);
+  const log10Val = exponent / Math.LN10;
+  if (log10Val < -250) {
+    document.getElementById("k-bound").textContent = "10^(" + Math.round(log10Val) + ")";
+  } else {
+    document.getElementById("k-bound").textContent = Math.exp(exponent).toExponential(2);
+  }
+}
+document.getElementById("rng-n").addEventListener("input", updateHoeffding);
+document.getElementById("rng-p").addEventListener("input", updateHoeffding);
+
+let beaconNonce = 1;
+async function refreshBeacon() {
+  beaconNonce += 1;
+  const payload = "CIBERSOC_COMMIT_REVEAL|CYCLE_01|NONCE_" + beaconNonce + "|" + Date.now();
+  if (window.crypto && window.crypto.subtle) {
+    const buf = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(payload));
+    const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    document.getElementById("beacon-out").textContent = "SHA-256 Master Seed: " + hex;
+  } else {
+    document.getElementById("beacon-out").textContent = "Deterministic Payload: " + payload;
+  }
+}
+document.getElementById("btn-reseed").addEventListener("click", refreshBeacon);
+
+const A_MAT = [
+  [0.10, 0.05, 0.08, 0.04],
+  [0.04, 0.12, 0.06, 0.05],
+  [0.12, 0.10, 0.22, 0.14],
+  [0.08, 0.07, 0.16, 0.15]
+];
+const L_DIR = [0.85, 0.90, 0.65, 0.50];
+const SECTORS = ["Public Education", "Public Health", "Industry & Inputs", "Energy & Infrastructure"];
+
+function solveEmbeddedLabour() {
+  let H = [...L_DIR];
+  for (let it = 0; it < 60; it++) {
+    const next = [0, 0, 0, 0];
+    for (let j = 0; j < 4; j++) {
+      let s = L_DIR[j];
+      for (let i = 0; i < 4; i++) s += H[i] * A_MAT[i][j];
+      next[j] = s;
+    }
+    H = next;
+  }
+  return H;
+}
+
+function solveGrossOutput(y) {
+  let x = [...y];
+  for (let it = 0; it < 60; it++) {
+    const next = [0, 0, 0, 0];
+    for (let i = 0; i < 4; i++) {
+      let s = y[i];
+      for (let j = 0; j < 4; j++) s += A_MAT[i][j] * x[j];
+      next[i] = s;
+    }
+    x = next;
+  }
+  return x;
+}
+
+function updateCyber() {
+  const hPct = Number(document.getElementById("rng-hvote").value);
+  const pv = Number(document.getElementById("rng-pv").value);
+  document.getElementById("val-hvote").textContent = hPct + "%";
+  document.getElementById("val-pv").textContent = pv.toFixed(2);
+
+  const shares = hPct >= 50 ? [25.0, 30.0, 25.0, 20.0] : [30.0, 25.0, 25.0, 20.0];
+  const H = solveEmbeddedLabour();
+  const totalL = 490.0;
+  const baseY = shares.map((sh, i) => ((sh / 100) * totalL) / H[i]);
+  const signal = Math.log(pv);
+  const adjY = baseY.map((val, i) => i === 1 ? val * (1 + 0.35 * signal) : val);
+  const x = solveGrossOutput(adjY);
+  const carbon = x[0]*0.04 + x[1]*0.03 + x[2]*0.02 + x[3]*0.01;
+
+  const tbody = document.querySelector("#tbl-cyber tbody");
+  tbody.innerHTML = SECTORS.map((name, i) =>
+    "<tr><td>" + name + "</td><td>" + shares[i].toFixed(1) + "%</td><td>" +
+    adjY[i].toFixed(2) + "</td><td>" + x[i].toFixed(2) + "</td><td>" + H[i].toFixed(4) + " h</td></tr>"
+  ).join("");
+  document.getElementById("cyber-foot").textContent =
+    "Embedded Labour Conservation Σ H·y* = " + totalL.toFixed(1) +
+    " h | Physical Carbon Draw: " + carbon.toFixed(2) + " / 500.0 MtCO2 (Within Planetary Boundary)";
+}
+document.getElementById("rng-hvote").addEventListener("input", updateCyber);
+document.getElementById("rng-pv").addEventListener("input", updateCyber);
+
+function updateEnterprise() {
+  const rev = Number(document.getElementById("inp-rev").value) || 185000;
+  const cpi = Number(document.getElementById("inp-cpi").value) || 100;
+  const fixedCosts = 62000 + 14000 + 21000 + 7000;
+  const netCents = Math.max(0, Math.round((rev - fixedCosts) * 100));
+  const weights = [30, 30, 30, 30, 30, 30, 30, 22];
+  const wSum = weights.reduce((a, b) => a + b, 0);
+  const fullShareCents = Math.floor((netCents * 30) / wSum);
+  const paidSum = weights.reduce((s, w) => s + Math.floor((netCents * w) / wSum), 0);
+  const carry = netCents - paidSum;
+  const stipend = 4800 * (cpi / 100.0);
+
+  document.getElementById("e-net").textContent = "$ " + (netCents / 100).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+  document.getElementById("e-share").textContent = "$ " + (fullShareCents / 100).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+  document.getElementById("e-carry").textContent = "Carry-over: " + carry + " cents";
+  document.getElementById("e-stipend").textContent = "$ " + stipend.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+document.getElementById("inp-rev").addEventListener("input", updateEnterprise);
+document.getElementById("inp-cpi").addEventListener("input", updateEnterprise);
+
+document.getElementById("lang-select").addEventListener("change", e => {
+  const dict = I18N[e.target.value] || I18N["en-GB"];
+  document.documentElement.lang = e.target.value;
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const k = el.getAttribute("data-i18n");
+    if (dict[k]) el.textContent = dict[k];
+  });
+});
+
+initSimulation();
+updateHoeffding();
+refreshBeacon();
+updateCyber();
+updateEnterprise();
+</script>
+</body>
+</html>

@@ -98,6 +98,12 @@ class TestAttemptId:
         b = _attempt_id("CIT-002", date(2024, 1, 1))
         assert a != b
 
+    def test_sequence_greater_than_one_differs(self) -> None:
+        first = _attempt_id("CIT-001", date(2024, 1, 1), sequence=1)
+        second = _attempt_id("CIT-001", date(2024, 1, 1), sequence=2)
+        assert len(second) == 16
+        assert first != second
+
 
 class TestNextDueAfterPass:
     def test_renewal_is_five_years_ahead(self) -> None:
@@ -325,3 +331,44 @@ class TestNextDueAfterPassLeapYear:
         result = _next_due_after_pass(taken, dob)
         assert result is not None
         assert result.year == 2065
+
+
+class TestCivicAgeExemptionAndCohortSummary:
+    def test_age_60_exempt_without_any_prior_attempts(self) -> None:
+        senior = _record(age=60)
+        ref = date(2024, 6, 15)
+        assert senior.attempts == []
+        assert senior.is_age_exempt(ref) is True
+        assert senior.is_compliant(ref) is True
+        assert senior.qualification_status_key(ref) == "civic_exam.status.exempt"
+
+    def test_qualification_status_keys_and_technical_audit(self) -> None:
+        sched = _scheduler()
+        ref = date(2024, 6, 15)
+        compliant_rec = _record(age=30)
+        sched.record_attempt(compliant_rec, _passing_scores(), date(2024, 1, 10))
+        assert compliant_rec.qualification_status_key(ref) == "civic_exam.status.compliant"
+        assert sched.is_qualified_for_technical_audit(compliant_rec, ref) is True
+
+        pending_rec = _record(age=28)
+        assert pending_rec.qualification_status_key(ref) == "civic_exam.status.non_compliant"
+        assert sched.is_qualified_for_technical_audit(pending_rec, ref) is False
+
+    def test_same_day_retest_produces_distinct_attempt_ids_and_cohort_summary(self) -> None:
+        sched = _scheduler()
+        ref = date(2024, 6, 15)
+        retest_rec = CitizenExamRecord(citizen_id="CIT-RETEST", date_of_birth=_dob(32))
+        first = sched.record_attempt(retest_rec, _failing_scores(), ref)
+        second = sched.record_attempt(retest_rec, _passing_scores(), ref)
+        assert first.attempt_id != second.attempt_id
+
+        senior = CitizenExamRecord(citizen_id="CIT-SENIOR", date_of_birth=_dob(65))
+        pending = CitizenExamRecord(citizen_id="CIT-PENDING", date_of_birth=_dob(22))
+        summary = sched.cohort_compliance_summary([retest_rec, senior, pending], ref)
+        assert summary == {
+            "total": 3,
+            "compliant": 2,
+            "technical_audit_qualified": 2,
+            "age_exempt": 1,
+            "pending_enablement": 1,
+        }

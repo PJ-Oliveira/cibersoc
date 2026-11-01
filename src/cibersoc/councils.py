@@ -8,6 +8,7 @@ from typing import Mapping, Sequence
 from .sortition import (
     CitizenProfile,
     CivilianSupremacyViolationError,
+    CounterModeHmacDrbg,
     MinistryPortfolio,
 )
 
@@ -104,6 +105,10 @@ class SecretaryGeneral:
         ballots_by_member: Mapping[str, bool],
         valid_member_ids: frozenset[str],
     ) -> CollegiateResolution:
+        if self.voting_weight != 1:
+            raise AutocraticActForbiddenError(
+                f"Equal suffrage violation: Secretary-General voting_weight must equal 1 (got {self.voting_weight})."
+            )
         if not valid_member_ids:
             raise ValueError("Council membership cannot be empty.")
         if self.profile.citizen_id not in valid_member_ids:
@@ -114,8 +119,16 @@ class SecretaryGeneral:
                 f"Ballots cast by non-members of Council: {sorted(unrecognised_voters)}"
             )
 
-        votes_in_favour = sum(1 for vote in ballots_by_member.values() if vote)
-        votes_against = sum(1 for vote in ballots_by_member.values() if not vote)
+        votes_in_favour = sum(
+            self.voting_weight if voter_id == self.profile.citizen_id else 1
+            for voter_id, vote in ballots_by_member.items()
+            if vote
+        )
+        votes_against = sum(
+            self.voting_weight if voter_id == self.profile.citizen_id else 1
+            for voter_id, vote in ballots_by_member.items()
+            if not vote
+        )
         majority_threshold = (len(valid_member_ids) // 2) + 1
 
         if votes_in_favour < majority_threshold:
@@ -329,14 +342,23 @@ class DemarchicCouncil:
     def member_ids(self) -> frozenset[str]:
         return frozenset(member.citizen_id for member in self.members)
 
-    def active_popular_jury_bench(self) -> list[CitizenProfile]:
+    def active_popular_jury_bench(self, case_id: str | None = None) -> list[CitizenProfile]:
         justice_chamber = self.portfolios.get(MinistryPortfolio.JUSTICE, [])
         if len(justice_chamber) < 3:
             raise ValueError(
                 f"Popular Jury requires at least 3 sorted citizens in the Justice portfolio (found {len(justice_chamber)})."
             )
         if len(justice_chamber) % 2 == 0:
-            return list(justice_chamber[:-1])
+            rotation_token = case_id.strip() if case_id and case_id.strip() else "DEFAULT"
+            seed_material = (
+                f"JURY_BENCH|{self.council_id}|{rotation_token}|"
+                f"{','.join(member.citizen_id for member in justice_chamber)}"
+            ).encode("utf-8")
+            drbg = CounterModeHmacDrbg(hashlib.sha256(seed_material).hexdigest())
+            excluded_index = drbg.randbelow_unbiased(len(justice_chamber))
+            return [
+                member for index, member in enumerate(justice_chamber) if index != excluded_index
+            ]
         return list(justice_chamber)
 
     def adjudicate_by_popular_jury(
@@ -349,9 +371,16 @@ class DemarchicCouncil:
         if case.council_id != self.council_id:
             raise ValueError("Case jurisdiction does not match target Council.")
 
-        jury_bench = self.active_popular_jury_bench()
-        expected_juror_ids = frozenset(member.citizen_id for member in jury_bench)
-        if frozenset(ballots_by_juror.keys()) != expected_juror_ids:
+        case_bench = self.active_popular_jury_bench(case.case_id)
+        default_bench = self.active_popular_jury_bench()
+        submitted_juror_ids = frozenset(ballots_by_juror.keys())
+        case_juror_ids = frozenset(member.citizen_id for member in case_bench)
+        default_juror_ids = frozenset(member.citizen_id for member in default_bench)
+        if submitted_juror_ids == case_juror_ids:
+            jury_bench = case_bench
+        elif submitted_juror_ids == default_juror_ids:
+            jury_bench = default_bench
+        else:
             raise ValueError(
                 "All active Popular Jury members must cast individual secret ballots without outsiders."
             )

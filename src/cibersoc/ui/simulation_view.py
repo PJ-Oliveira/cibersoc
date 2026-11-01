@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+import importlib
 import json
 from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import QLocale, Qt, QUrl
+from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
+    QBoxLayout,
     QComboBox,
     QFileDialog,
     QGroupBox,
-    QHBoxLayout,
     QLabel,
     QPushButton,
     QSizePolicy,
@@ -20,6 +23,7 @@ from PySide6.QtWidgets import (
 
 from ..i18n.translator import LocalizationCatalog
 from ..simulation.engine import (
+    InstitutionalRegime,
     NationSimulationEngine,
     SimulationScenario,
     StochasticEventMatrix,
@@ -31,10 +35,12 @@ STATUS_TEXT_KEYS: tuple[str, ...] = (
     "status_year",
     "status_idle",
     "status_metrics",
+    "status_comparison",
     "events_idle",
     "years_step_label",
     "btn_advance_years",
     "scenario_label",
+    "regime_label",
     "btn_export_csv",
     "btn_export_json",
 )
@@ -45,12 +51,14 @@ VIEWER_TEXT_KEYS: tuple[str, ...] = (
     "ctrl_hint",
     "hud_cycle",
     "hud_year",
+    "hud_regime",
     "hud_population",
     "hud_citizens",
     "hud_metrics",
     "hud_hdi",
     "hud_gini",
     "hud_employment",
+    "hud_comparison",
     "hud_hint",
     "hud_history",
     "legend_title",
@@ -60,6 +68,8 @@ VIEWER_TEXT_KEYS: tuple[str, ...] = (
     "legend_scale_high",
     "legend_rings_title",
     "legend_rings_text",
+    "legend_arcs_title",
+    "legend_arcs_text",
     "legend_particles_title",
     "legend_particles_text",
     "glossary_title",
@@ -95,26 +105,26 @@ _THREE_JS_HTML = """<!DOCTYPE html>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #16110E; color: #F4EAD8; font-family: monospace;
        overflow: hidden; width: 100vw; height: 100vh; }
-canvas { display: block; position: absolute; top: 0; left: 0; }
+body > canvas { display: block; position: absolute; top: 0; left: 0; }
 
 #hud {
-  position: absolute; top: 12px; left: 12px; z-index: 10;
+  position: absolute; top: 10px; left: 12px; z-index: 10;
   background: rgba(22,17,14,0.92); border: 1px solid #3a2e24;
-  padding: 10px 14px; border-radius: 4px;
-  width: clamp(170px, 22vw, 260px);
+  padding: 7px 11px; border-radius: 4px;
+  width: clamp(170px, 21vw, 250px);
 }
-#hud .section { font-size: clamp(7px,0.85vw,10px); color: #7a6a5a;
-                letter-spacing: 1px; margin-bottom: 5px; margin-top: 8px; }
+#hud .section { font-size: clamp(7px,0.8vw,9px); color: #7a6a5a;
+                letter-spacing: 1px; margin-bottom: 3px; margin-top: 5px; }
 #hud .section:first-child { margin-top: 0; }
-#hud .row { font-size: clamp(8px,1vw,12px); color: #C89B6D;
-            margin-bottom: 3px; display: flex;
+#hud .row { font-size: clamp(8px,0.92vw,11px); color: #C89B6D;
+            margin-bottom: 2px; display: flex;
             justify-content: space-between; gap: 8px; }
 #hud .val  { color: #F4EAD8; font-weight: bold; }
-#hud .hint { font-size: clamp(7px,0.85vw,10px); color: #7a6a5a;
-             margin-top: 6px; font-style: italic; }
+#hud .hint { font-size: clamp(7px,0.8vw,9px); color: #7a6a5a;
+             margin-top: 4px; font-style: italic; }
 #history-chart {
-  display: block; width: 100%; height: 50px;
-  margin-top: 6px; border: 1px solid #3a2e24;
+  display: block; width: 100%; height: 42px;
+  margin-top: 4px; border: 1px solid #3a2e24;
   border-radius: 2px; background: #120d0a;
 }
 
@@ -160,6 +170,8 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
                    background: linear-gradient(90deg,#C26653,#C89B6D,#84A97C); }
 #legend .sw-ring { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
                    border: 2px solid rgba(200,155,109,0.85); }
+#legend .sw-arc { width: 22px; height: 9px; border-top: 2px solid #DFB589;
+                  border-radius: 50% 50% 0 0; flex-shrink: 0; }
 #legend .sw-dots { display: inline-flex; gap: 3px; flex-shrink: 0; }
 #legend .sw-dots i { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
 #legend .gloss { border-top: 1px solid #3a2e24; padding-top: 7px; }
@@ -217,12 +229,14 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
 <div id="hud">
   <div class="section" data-i18n="hud_cycle"></div>
   <div class="row"><span data-i18n="hud_year"></span><span class="val" id="v-year">1</span></div>
+  <div class="row"><span data-i18n="hud_regime"></span><span class="val" id="v-regime">A · DEM</span></div>
   <div class="row"><span data-i18n="hud_population"></span><span class="val" id="v-pop">—</span></div>
   <div class="row"><span data-i18n="hud_citizens"></span><span class="val" id="v-drawn">0</span></div>
   <div class="section" data-i18n="hud_metrics"></div>
   <div class="row"><span data-i18n="hud_hdi"></span><span class="val" id="v-hdi">—</span></div>
   <div class="row"><span data-i18n="hud_gini"></span><span class="val" id="v-gini">—</span></div>
   <div class="row"><span data-i18n="hud_employment"></span><span class="val" id="v-emp">—</span></div>
+  <div class="row"><span data-i18n="hud_comparison"></span><span class="val" id="v-comp">—</span></div>
   <div class="hint" id="v-hint" data-i18n="hud_hint"></div>
   <div class="section" data-i18n="hud_history"></div>
   <canvas id="history-chart" width="240" height="50"></canvas>
@@ -248,6 +262,10 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
     <div class="leg-item">
       <div class="leg-title"><span class="sw-ring"></span><span data-i18n="legend_rings_title"></span></div>
       <div class="leg-text" data-i18n="legend_rings_text"></div>
+    </div>
+    <div class="leg-item">
+      <div class="leg-title"><span class="sw-arc"></span><span data-i18n="legend_arcs_title"></span></div>
+      <div class="leg-text" data-i18n="legend_arcs_text"></div>
     </div>
     <div class="leg-item">
       <div class="leg-title">
@@ -335,6 +353,12 @@ window.applyI18n = function(map) {
 
 window.updateHud = function(data) {
   setText('v-year', String(data.year));
+  const regMap = {
+    'CIBERSOC_DEMARCHY': 'A · DEM',
+    'ELECTORAL_OLIGARCHY': 'B · OLI',
+    'BUREAUCRATIC_CENTRALISM': 'C · CEN'
+  };
+  setText('v-regime', regMap[data.regime] || 'A · DEM');
   setText('v-pop', fmtInt(data.population_size));
   setText('v-drawn', fmtInt(data.citizens_drawn));
   const hasCycle = !!data.latest_cycle;
@@ -346,6 +370,12 @@ window.updateHud = function(data) {
     setText('v-hdi', fmtDec(c.aggregate_hdi, 3));
     setText('v-gini', fmtDec(c.aggregate_gini, 3));
     setText('v-emp', fmtDec(c.aggregate_employment * 100, 1) + '%');
+    if (data.regime_comparison && data.regime_comparison.CIBERSOC_DEMARCHY && data.regime_comparison.ELECTORAL_OLIGARCHY) {
+      const dh = data.regime_comparison.CIBERSOC_DEMARCHY.aggregate_hdi - data.regime_comparison.ELECTORAL_OLIGARCHY.aggregate_hdi;
+      setText('v-comp', (dh >= 0 ? '+' : '') + fmtDec(dh, 3) + ' HDI');
+    } else {
+      setText('v-comp', '—');
+    }
     historySnapshots.push({
       year: data.year,
       hdi: c.aggregate_hdi,
@@ -362,6 +392,7 @@ window.updateHud = function(data) {
     setText('v-hdi', '—');
     setText('v-gini', '—');
     setText('v-emp', '—');
+    setText('v-comp', '—');
     historySnapshots.length = 0;
     const idle = document.createElement('div');
     idle.className = 'ev-line';
@@ -377,6 +408,11 @@ document.getElementById('leg-toggle').addEventListener('click', () => {
   box.classList.toggle('collapsed');
   setText('leg-caret', box.classList.contains('collapsed') ? '\u25b8' : '\u25be');
 });
+if (window.innerHeight < 520) {
+  const box = document.getElementById('legend');
+  box.classList.add('collapsed');
+  setText('leg-caret', '\u25b8');
+}
 </script>
 <script type="importmap">
 {"imports":{
@@ -397,7 +433,7 @@ const camera = new THREE.PerspectiveCamera(52, W() / H(), 0.1, 300);
 camera.position.set(4, 26, 38);
 camera.lookAt(4, 0, 1);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(W(), H());
 document.body.appendChild(renderer.domElement);
@@ -428,6 +464,7 @@ function zoomCamera(factor) {
   camera.position.copy(controls.target).addScaledVector(offset.normalize(), newLen);
   controls.update();
 }
+window.zoomScene = zoomCamera;
 document.getElementById('zoom-in').addEventListener('click',  () => zoomCamera(0.78));
 document.getElementById('zoom-out').addEventListener('click', () => zoomCamera(1.28));
 
@@ -446,11 +483,29 @@ const REGIONS = [
 const POP_MAX = 45000000;
 
 function mapXZ(lat, lon) {
-  const latMin = -34, latMax = -1, lonMin = -62, lonMax = -34;
-  const x = ((lon - lonMin) / (lonMax - lonMin) - 0.5) * 26;
-  const z = -((lat - latMin) / (latMax - latMin) - 0.5) * 22;
+  const latMin = -34, latMax = 5.5, lonMin = -74, lonMax = -34;
+  const x = ((lon - lonMin) / (lonMax - lonMin) - 0.5) * 30;
+  const z = -((lat - latMin) / (latMax - latMin) - 0.5) * 26;
   return [x, z];
 }
+
+const BRAZIL_OUTLINE = [
+  [5.27,-60.20],[4.40,-51.55],[1.80,-49.90],[-0.80,-48.20],[-2.55,-44.30],
+  [-2.90,-40.80],[-3.72,-38.50],[-5.10,-35.20],[-8.05,-34.80],[-10.90,-37.05],
+  [-12.97,-38.50],[-16.40,-39.05],[-20.30,-40.30],[-22.90,-42.00],[-23.00,-43.20],
+  [-24.00,-46.30],[-25.50,-48.50],[-27.60,-48.55],[-30.05,-50.20],[-33.75,-53.40],
+  [-30.90,-55.55],[-29.75,-57.10],[-25.60,-54.60],[-24.05,-54.30],[-22.10,-58.00],
+  [-19.00,-57.65],[-16.30,-58.40],[-13.50,-60.40],[-10.95,-65.35],[-11.00,-69.60],
+  [-9.50,-72.80],[-7.50,-73.98],[-4.20,-69.95],[-1.20,-69.45],[1.70,-67.10],
+  [3.90,-64.20]
+];
+
+const MACRO_BORDERS = [
+  [[-9.50,-72.80],[-8.80,-63.90],[-9.80,-56.00],[-10.20,-48.30],[-2.55,-44.30]],
+  [[-10.20,-48.30],[-14.20,-46.20],[-18.30,-39.65]],
+  [[-14.20,-46.20],[-19.95,-51.00],[-24.05,-54.30]],
+  [[-24.05,-54.30],[-22.95,-49.95],[-25.20,-48.10]]
+];
 
 function hdiColor(hdi) {
   const lo = new THREE.Color(0xC26653);
@@ -567,16 +622,111 @@ const pMat = new THREE.PointsMaterial(
   {size: 0.13, vertexColors: true, transparent: true, opacity: 0.82});
 scene.add(new THREE.Points(pGeo, pMat));
 
-const groundGeo = new THREE.PlaneGeometry(40, 36);
-const groundMat = new THREE.MeshBasicMaterial({color: 0x1c1410, side: THREE.DoubleSide});
+const groundGeo = new THREE.PlaneGeometry(44, 40);
+const groundMat = new THREE.MeshBasicMaterial({color: 0x18120e, side: THREE.DoubleSide});
 const ground    = new THREE.Mesh(groundGeo, groundMat);
 ground.rotation.x = -Math.PI / 2;
-ground.position.set(4, -0.01, 1);
+ground.position.set(2, -0.02, 0);
 scene.add(ground);
 
-const grid = new THREE.GridHelper(42, 42, 0x2a1e14, 0x221810);
-grid.position.set(4, 0, 1);
+const grid = new THREE.GridHelper(44, 44, 0x2a1e14, 0x201710);
+grid.position.set(2, -0.01, 0);
 scene.add(grid);
+
+(function buildBrazilMap() {
+  const shape = new THREE.Shape();
+  const outlinePts3D = [];
+  BRAZIL_OUTLINE.forEach(([lat, lon], idx) => {
+    const [bx, bz] = mapXZ(lat, lon);
+    if (idx === 0) shape.moveTo(bx, -bz);
+    else shape.lineTo(bx, -bz);
+    outlinePts3D.push(new THREE.Vector3(bx, 0.025, bz));
+  });
+  shape.closePath();
+  const landGeo = new THREE.ShapeGeometry(shape);
+  const landMat = new THREE.MeshLambertMaterial({
+    color: 0x281D15,
+    emissive: 0x140E0A,
+    side: THREE.DoubleSide
+  });
+  const landMesh = new THREE.Mesh(landGeo, landMat);
+  landMesh.rotation.x = -Math.PI / 2;
+  landMesh.position.y = 0.01;
+  scene.add(landMesh);
+
+  const borderGeo = new THREE.BufferGeometry().setFromPoints(outlinePts3D);
+  const borderMat = new THREE.LineBasicMaterial({
+    color: 0xC89B6D,
+    transparent: true,
+    opacity: 0.78
+  });
+  scene.add(new THREE.LineLoop(borderGeo, borderMat));
+
+  const subBorderMat = new THREE.LineBasicMaterial({
+    color: 0x6E523E,
+    transparent: true,
+    opacity: 0.52
+  });
+  MACRO_BORDERS.forEach(poly => {
+    const pts = poly.map(([lat, lon]) => {
+      const [px, pz] = mapXZ(lat, lon);
+      return new THREE.Vector3(px, 0.022, pz);
+    });
+    const g = new THREE.BufferGeometry().setFromPoints(pts);
+    scene.add(new THREE.Line(g, subBorderMat));
+  });
+})();
+
+const corridorGroup = new THREE.Group();
+scene.add(corridorGroup);
+
+const DEFAULT_CORRIDORS = [
+  {from_id:"BR-SP",to_id:"BR-RJ",intensity:0.82},
+  {from_id:"BR-SP",to_id:"BR-MG",intensity:0.78},
+  {from_id:"BR-SP",to_id:"BR-PR",intensity:0.80},
+  {from_id:"BR-PR",to_id:"BR-RS",intensity:0.76},
+  {from_id:"BR-MG",to_id:"BR-BA",intensity:0.70},
+  {from_id:"BR-BA",to_id:"BR-PE",intensity:0.68},
+  {from_id:"BR-PE",to_id:"BR-CE",intensity:0.66},
+  {from_id:"BR-CE",to_id:"BR-PA",intensity:0.62},
+  {from_id:"BR-PA",to_id:"BR-AM",intensity:0.60},
+  {from_id:"BR-SP",to_id:"BR-PA",intensity:0.64}
+];
+
+function rebuildCorridors(flows) {
+  while (corridorGroup.children.length > 0) {
+    const ch = corridorGroup.children.pop();
+    if (ch.geometry) ch.geometry.dispose();
+    if (ch.material) ch.material.dispose();
+  }
+  const activeFlows = (flows && flows.length) ? flows : DEFAULT_CORRIDORS;
+  const loCol = new THREE.Color(0x8A6543);
+  const hiCol = new THREE.Color(0xDFB589);
+  activeFlows.forEach(f => {
+    const s = cityData[f.from_id];
+    const t = cityData[f.to_id];
+    if (!s || !t) return;
+    const dx = t.cx - s.cx, dz = t.cz - s.cz;
+    const dist = Math.hypot(dx, dz);
+    const inten = Math.max(0.15, Math.min(1.0, f.intensity || 0.65));
+    const arcH = 1.4 + dist * 0.16 + inten * 1.4;
+    const curve = new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(s.cx, 0.45, s.cz),
+      new THREE.Vector3((s.cx + t.cx) * 0.5, arcH, (s.cz + t.cz) * 0.5),
+      new THREE.Vector3(t.cx, 0.45, t.cz)
+    );
+    const pts = curve.getPoints(28);
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const col = new THREE.Color().lerpColors(loCol, hiCol, inten);
+    const mat = new THREE.LineBasicMaterial({
+      color: col,
+      transparent: true,
+      opacity: 0.28 + inten * 0.54
+    });
+    corridorGroup.add(new THREE.Line(geo, mat));
+  });
+}
+rebuildCorridors(DEFAULT_CORRIDORS);
 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -654,6 +804,9 @@ window.updateSimulation = function(data) {
     paintLabel(d.label, REGIONS.find(x => x.id === r.region_id).name,
                hdi, r.gini, r.population_size);
   });
+  if (data.inter_regional_flows) {
+    rebuildCorridors(data.inter_regional_flows);
+  }
   if (activeInspectorRegionId) {
     showInspector(activeInspectorRegionId);
   }
@@ -687,11 +840,36 @@ animate();
 </html>"""
 
 
-def _create_render_widget(html_content: str) -> tuple[QWidget, bool]:
-    try:
-        from PySide6.QtWebEngineWidgets import QWebEngineView
+def _format_signed_locale(formatter: QLocale, value: float, decimals: int) -> str:
+    formatted = formatter.toString(value, "f", decimals)
+    if value >= 0.0:
+        return f"+{formatted}"
+    return formatted
 
-        view = QWebEngineView()
+
+def _load_default_webengine_cls(
+    module_name: str = "PySide6.QtWebEngineWidgets",
+    class_name: str = "QWebEngineView",
+) -> Callable[[], Any]:
+    module = importlib.import_module(module_name)
+    return getattr(module, class_name)
+
+
+def _create_render_widget(
+    html_content: str,
+    webengine_view_cls: Callable[[], Any] | None = None,
+    module_loader: Callable[[], Callable[[], Any]] = _load_default_webengine_cls,
+    allow_offscreen_webengine: bool = False,
+) -> tuple[QWidget, bool]:
+    is_offscreen = QGuiApplication.platformName().strip().lower() in {"offscreen", "minimal"}
+    try:
+        if webengine_view_cls is None:
+            if is_offscreen and not allow_offscreen_webengine:
+                raise RuntimeError("Offscreen platform uses lightweight fallback widget.")
+            view_cls = module_loader()
+        else:
+            view_cls = webengine_view_cls
+        view = view_cls()
         base_url = QUrl.fromLocalFile(str(Path(__file__).resolve().parent) + "/")
         view.setHtml(html_content, baseUrl=base_url)
         return view, True
@@ -704,11 +882,16 @@ def _create_render_widget(html_content: str) -> tuple[QWidget, bool]:
 
 class SimulationTab(QWidget):
     def __init__(
-        self, parent: QWidget | None = None, translator: LocalizationCatalog | None = None
+        self,
+        parent: QWidget | None = None,
+        translator: LocalizationCatalog | None = None,
+        render_widget_factory: Callable[[str], tuple[QWidget, bool]] | None = None,
+        save_file_dialog: Callable[..., tuple[str, str]] | None = None,
     ) -> None:
         super().__init__(parent)
         self._sim_engine = NationSimulationEngine()
         self._event_matrix = StochasticEventMatrix(seed=42)
+        self._save_file_dialog = save_file_dialog or QFileDialog.getSaveFileName
         self._advance_text = ""
         self._status_texts: dict[str, str] = {}
         self._viewer_texts: dict[str, str] = {}
@@ -722,53 +905,72 @@ class SimulationTab(QWidget):
         ctl_layout = QVBoxLayout(self.grp_controls)
         ctl_layout.setSpacing(3)
 
-        status_row = QHBoxLayout()
-        status_row.setSpacing(6)
+        self.status_row = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self.status_row.setSpacing(6)
         self.lbl_status_year = QLabel()
         self.lbl_status_year.setObjectName("SectionHeading")
         yr_pol = self.lbl_status_year.sizePolicy()
         yr_pol.setHorizontalPolicy(QSizePolicy.Policy.Ignored)
         self.lbl_status_year.setSizePolicy(yr_pol)
-        status_row.addWidget(self.lbl_status_year, stretch=1)
+        self.status_row.addWidget(self.lbl_status_year, stretch=1)
 
         self.btn_advance_year = QPushButton()
         self.btn_advance_year.setObjectName("PrimaryActionButton")
         self.btn_advance_year.clicked.connect(self._on_advance_year)
         self.btn_reset = QPushButton()
         self.btn_reset.clicked.connect(self._on_reset)
-        status_row.addWidget(self.btn_advance_year)
-        status_row.addWidget(self.btn_reset)
-        ctl_layout.addLayout(status_row)
+        self.status_row.addWidget(self.btn_advance_year)
+        self.status_row.addWidget(self.btn_reset)
+        ctl_layout.addLayout(self.status_row)
 
-        step_row = QHBoxLayout()
-        step_row.setSpacing(6)
+        self.step_row = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self.step_row.setSpacing(6)
         self.lbl_years_step = QLabel()
         self.spn_years_step = QSpinBox()
         self.spn_years_step.setRange(1, YEARS_PER_STEP_LIMIT)
         self.spn_years_step.valueChanged.connect(self._on_years_step_changed)
-        step_row.addWidget(self.lbl_years_step)
-        step_row.addWidget(self.spn_years_step)
+        self.step_row.addWidget(self.lbl_years_step)
+        self.step_row.addWidget(self.spn_years_step)
 
         self.lbl_scenario = QLabel()
         self.cmb_scenario = QComboBox()
+        self.cmb_scenario.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
+        self.cmb_scenario.setMinimumContentsLength(14)
         for scenario in SimulationScenario:
             self.cmb_scenario.addItem(scenario.name, scenario)
         self.cmb_scenario.currentIndexChanged.connect(self._on_scenario_changed)
-        step_row.addWidget(self.lbl_scenario)
-        step_row.addWidget(self.cmb_scenario)
-        step_row.addStretch(1)
-        ctl_layout.addLayout(step_row)
+        self.step_row.addWidget(self.lbl_scenario)
+        self.step_row.addWidget(self.cmb_scenario, stretch=1)
+        ctl_layout.addLayout(self.step_row)
 
-        actions_row = QHBoxLayout()
-        actions_row.setSpacing(6)
+        self.regime_row = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self.regime_row.setSpacing(6)
+        self.lbl_regime = QLabel()
+        self.cmb_regime = QComboBox()
+        self.cmb_regime.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
+        self.cmb_regime.setMinimumContentsLength(14)
+        for regime in InstitutionalRegime:
+            self.cmb_regime.addItem(regime.name, regime)
+        self.cmb_regime.currentIndexChanged.connect(self._on_regime_changed)
+        self.regime_row.addWidget(self.lbl_regime)
+        self.regime_row.addWidget(self.cmb_regime, stretch=1)
+
         self.btn_export_csv = QPushButton()
         self.btn_export_csv.clicked.connect(self._on_export_csv)
         self.btn_export_json = QPushButton()
         self.btn_export_json.clicked.connect(self._on_export_json)
-        actions_row.addWidget(self.btn_export_csv)
-        actions_row.addWidget(self.btn_export_json)
-        actions_row.addStretch(1)
-        ctl_layout.addLayout(actions_row)
+        self.regime_row.addWidget(self.btn_export_csv)
+        self.regime_row.addWidget(self.btn_export_json)
+        ctl_layout.addLayout(self.regime_row)
+        self.adaptive_layouts: tuple[QBoxLayout, ...] = (
+            self.status_row,
+            self.step_row,
+            self.regime_row,
+        )
 
         self.lbl_status_metrics = QLabel()
         self.lbl_status_metrics.setWordWrap(True)
@@ -785,10 +987,12 @@ class SimulationTab(QWidget):
         evt_layout.addWidget(self.lbl_events)
         outer.addWidget(self.grp_events)
 
+        factory = render_widget_factory or _create_render_widget
         self._render_widget: Any
-        self._render_widget, self._has_webengine = _create_render_widget(_THREE_JS_HTML)
+        self._render_widget, self._has_webengine = factory(_THREE_JS_HTML)
         outer.addWidget(self._render_widget, stretch=1)
         if self._has_webengine:
+            self._render_widget.setMinimumHeight(310)
             self._render_widget.loadFinished.connect(self._on_page_loaded)
 
         self.apply_translations(translator or LocalizationCatalog())
@@ -803,6 +1007,7 @@ class SimulationTab(QWidget):
         self._number_locale = QLocale(self._viewer_texts["number_locale"])
         self.lbl_years_step.setText(self._status_texts["years_step_label"])
         self.lbl_scenario.setText(self._status_texts["scenario_label"])
+        self.lbl_regime.setText(self._status_texts["regime_label"])
         self.btn_export_csv.setText(self._status_texts["btn_export_csv"])
         self.btn_export_json.setText(self._status_texts["btn_export_json"])
         current_idx = self.cmb_scenario.currentIndex()
@@ -818,6 +1023,21 @@ class SimulationTab(QWidget):
         else:
             self.cmb_scenario.setCurrentIndex(0)
         self.cmb_scenario.blockSignals(False)
+
+        current_reg_idx = self.cmb_regime.currentIndex()
+        self.cmb_regime.blockSignals(True)
+        self.cmb_regime.clear()
+        for regime in InstitutionalRegime:
+            self.cmb_regime.addItem(
+                translator.translate(f"simulation.regime.{regime.name}"),
+                regime,
+            )
+        if 0 <= current_reg_idx < self.cmb_regime.count():
+            self.cmb_regime.setCurrentIndex(current_reg_idx)
+        else:
+            self.cmb_regime.setCurrentIndex(0)
+        self.cmb_regime.blockSignals(False)
+
         self._refresh_advance_button()
         self._push_viewer_texts()
         self._refresh_status()
@@ -835,6 +1055,14 @@ class SimulationTab(QWidget):
     def set_active_macro_directive(self, directive: str) -> None:
         self._sim_engine.set_active_macro_directive(directive)
 
+    def zoom_in(self) -> None:
+        if self._has_webengine:
+            self._render_widget.page().runJavaScript("if(window.zoomScene){window.zoomScene(0.78);}")
+
+    def zoom_out(self) -> None:
+        if self._has_webengine:
+            self._render_widget.page().runJavaScript("if(window.zoomScene){window.zoomScene(1.28);}")
+
     def _refresh_advance_button(self) -> None:
         years = self.spn_years_step.value()
         if years == 1 or not self._advance_text:
@@ -848,12 +1076,32 @@ class SimulationTab(QWidget):
     def _on_scenario_changed(self, index: int) -> None:
         raw = self.cmb_scenario.itemData(index)
         try:
-            self._sim_engine.scenario = SimulationScenario(raw)
+            target_scenario = SimulationScenario(raw)
         except (ValueError, KeyError):
-            pass
+            return
+        if not self._sim_engine.cycles:
+            active_directive = self._sim_engine.active_macro_directive
+            self._sim_engine = NationSimulationEngine(
+                scenario=target_scenario,
+                regime=self._sim_engine.regime,
+            )
+            if active_directive:
+                self._sim_engine.set_active_macro_directive(active_directive)
+            self._refresh_status()
+        else:
+            self._sim_engine.scenario = target_scenario
+
+    def _on_regime_changed(self, index: int) -> None:
+        raw = self.cmb_regime.itemData(index)
+        try:
+            target_regime = InstitutionalRegime(raw)
+        except (ValueError, KeyError):
+            return
+        self._sim_engine.switch_regime(target_regime)
+        self._refresh_status()
 
     def _on_export_csv(self) -> None:
-        file_path, _ = QFileDialog.getSaveFileName(
+        file_path, _ = self._save_file_dialog(
             self,
             self._status_texts.get("btn_export_csv", "Export CSV"),
             "cibersoc_simulation.csv",
@@ -863,7 +1111,7 @@ class SimulationTab(QWidget):
             self._sim_engine.export_time_series_csv(Path(file_path))
 
     def _on_export_json(self) -> None:
-        file_path, _ = QFileDialog.getSaveFileName(
+        file_path, _ = self._save_file_dialog(
             self,
             self._status_texts.get("btn_export_json", "Export JSON"),
             "cibersoc_simulation.json",
@@ -904,13 +1152,26 @@ class SimulationTab(QWidget):
         )
         if engine.cycles:
             last = engine.cycles[-1]
-            self.lbl_status_metrics.setText(
-                self._status_texts["status_metrics"].format(
-                    hdi=formatter.toString(last.aggregate_hdi, "f", 3),
-                    gini=formatter.toString(last.aggregate_gini, "f", 3),
-                    employment=formatter.toString(last.aggregate_employment * 100, "f", 1),
-                )
+            metrics_line = self._status_texts["status_metrics"].format(
+                hdi=formatter.toString(last.aggregate_hdi, "f", 3),
+                gini=formatter.toString(last.aggregate_gini, "f", 3),
+                employment=formatter.toString(last.aggregate_employment * 100, "f", 1),
             )
+            comp = engine.compare_regimes()
+            dem = comp[InstitutionalRegime.CIBERSOC_DEMARCHY.value]
+            oli = comp[InstitutionalRegime.ELECTORAL_OLIGARCHY.value]
+            dhdi_val = dem["aggregate_hdi"] - oli["aggregate_hdi"]
+            dgini_val = dem["aggregate_gini"] - oli["aggregate_gini"]
+            demp_val = (dem["aggregate_employment"] - oli["aggregate_employment"]) * 100.0
+            dhdi_str = _format_signed_locale(formatter, dhdi_val, 3)
+            dgini_str = _format_signed_locale(formatter, dgini_val, 3)
+            demp_str = _format_signed_locale(formatter, demp_val, 1)
+            comp_line = self._status_texts["status_comparison"].format(
+                dhdi=dhdi_str,
+                dgini=dgini_str,
+                demp=demp_str,
+            )
+            self.lbl_status_metrics.setText(f"{metrics_line}\n{comp_line}")
         else:
             self.lbl_status_metrics.setText(self._status_texts["status_idle"])
         self._push_simulation_data(json.dumps(engine.serialise_for_renderer()))
@@ -934,11 +1195,22 @@ class SimulationTab(QWidget):
         self._refresh_events()
 
     def _on_reset(self) -> None:
-        raw = self.cmb_scenario.currentData()
+        raw_scenario = self.cmb_scenario.currentData()
         try:
-            target_scenario = SimulationScenario(raw)
+            target_scenario = SimulationScenario(raw_scenario)
         except (ValueError, KeyError):
             target_scenario = SimulationScenario.BASELINE
-        self._sim_engine = NationSimulationEngine(scenario=target_scenario)
+        raw_regime = self.cmb_regime.currentData()
+        try:
+            target_regime = InstitutionalRegime(raw_regime)
+        except (ValueError, KeyError):
+            target_regime = InstitutionalRegime.CIBERSOC_DEMARCHY
+        active_directive = self._sim_engine.active_macro_directive
+        self._sim_engine = NationSimulationEngine(
+            scenario=target_scenario,
+            regime=target_regime,
+        )
+        if active_directive:
+            self._sim_engine.set_active_macro_directive(active_directive)
         self._refresh_status()
         self._refresh_events()

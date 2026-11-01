@@ -1,132 +1,119 @@
 # 01. Theoretical Foundations and Logical Defence
 
 <p align="center">
-  <img src="../../assets/images/cibersoc_emblem_hd.png" alt="CIBERSOC Freedom Wings Emblem" width="280"/>
+  <img src="../../assets/images/cibersoc_emblem_hd.png" alt="CIBERSOC Freedom Wings Emblem" width="260"/>
 </p>
 
 ## 1. Architectural Foundations and Core Structural Axioms
 
-**CIBERSOC** is an autonomous political, economic and computational architecture grounded in two formal pillars:
-1. **Statistical Sampling Theory and Classical Sortition:** Applying unbiased probability sampling to public governance so that deliberative bodies mirror the demographic and occupational composition of society without electoral oligarchy;
-2. **Cybernetic Economic Planning:** Extending the input‑output, labour‑time accounting and non‑linear capacity‑relaxation framework formulated by **W. Paul Cockshott and Allin Cottrell** in *Towards a New Socialism* (1993).
+**CIBERSOC** is an autonomous computational mechanism-design, social-choice, and cybernetic governance architecture grounded in two formal scientific pillars:
+1. **Statistical Sampling Theory and Classical Sortition:** Applying unbiased stratified probability sampling to public deliberation so that representative assemblies mirror the demographic and occupational distribution of society without electoral oligarchy or campaign-finance capture;
+2. **Cybernetic Input–Output Planning:** Extending the sparse input–output, labour-time accounting, and non-linear capacity-relaxation framework formulated by **W. Paul Cockshott and Allin Cottrell** in *Towards a New Socialism* (1993) alongside Wassily Leontief's structural balance models.
 
-The system operates on seven structural axioms enforced directly in software:
+The platform encodes seven structural axioms directly as verifiable software invariants:
 
-1. **Pure Statistical Demarchy (100% Abolition of Elections and Delegation):** **CIBERSOC** extinguishes all direct and indirect elections, political parties and career politicians. Every deliberative seat is filled exclusively through **auditable stratified statistical sortition** (`Commit‑Reveal SHA‑256` + proportional Hamilton quotas), paired with fixed short‑term mandates and **compulsory exclusion from the urn in the subsequent sortition cycle**.
-2. **Permanent Socialism Focused on Continuous Optimisation:** **CIBERSOC** does not posit a temporary transitional stage towards stateless communism; it establishes a **Permanent Cybernetic and Demarchic Socialism** dedicated to continuous allocative optimisation under a headless State.
-3. **Four‑Tier Escalated Council Mesh and Logistical Secretary‑General:** Governance operates across four permanent federated tiers — **Sectoral Councils** (neighbourhoods — primary citizen interface), **Municipal Councils**, **State Councils** and the **Federal Council**. Titles and autocratic powers of *President*, *Prime Minister*, *Governor* and *Mayor* are abolished. Each Council's **Secretary‑General** acts strictly as a logistical agenda and minutes coordinator (`voting_weight = 1`, zero veto power, zero unilateral decree power).
-4. **Ministry of Defence Under Exclusive Civilian Control:** Within the Federal Council, the Ministry of Defence is staffed exclusively by sorted civilians; high‑ranking generals answer directly to the sorted civilian minister under a cryptographic **Civilian Multi‑Sig Gate**.
-5. **CEO Abolition and Strictly Equal ($1/N_e$) Enterprise Surplus Sharing:** Productive units operate under Cockshott's non‑alienable usufruct bitmask `[Use=1, Sell=0, Buy=0, Inherit=0]` (`state_code = 8`), **abolish CEO and C‑Suite positions**, and distribute **100% of net operating surplus equally amongst all active workers** via exact integer‑day rational arithmetic with zero corporate retention.
-6. **Inflation‑Indexed Civilian Parity and Protected Job Return ($\ge 6$ Months):** Whilst serving on a Council, a sorted citizen receives a state stipend equal to their prior civilian pay indexed to official inflation, followed by **guaranteed reinstatement to their original post with at least 180 days (6 months) of protected employment stability**.
-7. **Closed Macroeconomic Plebiscites and Logical Refutation of Electoral Coercion:** Direct popular voting occurs solely within a closed cybernetic system for **concrete macroeconomic resource allocations** (e.g. `+5% Public Education` vs `+5% Public Health`), binding compulsorily upon all Councils and grounded in the probabilistic and decision‑theoretic critique of candidate elections.
-
----
-
-## 2. Structural Critique of Electoral Democracy
-
-Following Aristotle (*Politics*, IV.1294b) and modern public‑choice analysis, **elections function structurally as oligarchic selection filters rather than representative instruments**. Electoral democracy fails across four concrete axes:
-1. **Systemic Economic Capture:** Mass campaigns require capital‑intensive media, micro‑targeting and organisational funding, allowing economic conglomerates to pre‑select viable candidates and subordinate elected officials prior to ballot day.
-2. **The Career Politician Caste:** Voluntary candidacy and re‑election create a self‑serving professional group maximising $U_{\text{politician}} = \alpha P(\text{re‑election}) + \beta R_{\text{privileges}} + \gamma C_{\text{coalition}}$ rather than collective welfare.
-3. **False Representativeness:** Compressing millions of technical and intertemporal trade‑offs into a single vote for a personality rewards tribal polarisation, demagoguery and simplistic slogans over engineering rigour.
-4. **Electoral Short‑Termism:** Four‑year electoral cycles impose steep temporal discounting, penalising infrastructure, decarbonisation and scientific programmes whose costs occur in $t \in [1, 3]$ whilst benefits mature in $t > 4$.
+1. **Pure Statistical Demarchy (100% Abolition of Elections and Delegation):** **CIBERSOC** eliminates direct and indirect candidate elections, political party machines, and career politicians. Every deliberative seat is staffed exclusively through **auditable stratified statistical sortition** (`Commit-Reveal SHA-256` + proportional integer Hamilton quotas), paired with fixed short-term mandates and **compulsory exclusion from the urn in the subsequent sortition cycle**.
+2. **Non-Transitional Continuous Allocative Optimisation:** Rather than positing an indeterminate transitional stage, **CIBERSOC** models a permanent **Cybernetic and Demarchic Governance Architecture** dedicated to continuous multi-sector optimisation under an acéphalous (headless) federated council mesh.
+3. **Four-Tier Escalated Council Mesh and Logistical Secretary-General:** Coordination operates across four federated tiers — **Sectoral Councils** (neighbourhoods — primary citizen interface), **Municipal Councils**, **State Councils**, and the **Federal Council**. Unitary executive offices (*President*, *Prime Minister*, *Governor*, *Mayor*) are absent. Each Council's **Secretary-General** acts strictly as a logistical agenda and minutes coordinator (`voting_weight = 1`, zero veto power, zero unilateral decree power).
+4. **Ministry of Defence Under Exclusive Civilian Control:** Within the Federal Council, the Ministry of Defence is staffed exclusively by sorted civilians; high-ranking general officers answer directly to the sorted civilian minister under a cryptographic **Civilian Multi-Sig Gate** ($\ge \lceil 2/3 \cdot |D| \rceil$ civilian Defence Chamber approval).
+5. **Horizontal Cooperative Enterprises and Strictly Equal ($1/N_e$) Surplus Sharing:** Productive units operate under Cockshott's non-alienable usufruct bitmask `[Use=1, Sell=0, Buy=0, Inherit=0]` (`state_code = 8`), **exclude CEO and executive-board hierarchies**, and distribute **100% of net operating surplus equally amongst all active workers** via exact integer-day rational arithmetic (`Decimal` + `math.gcd`) with zero corporate retention.
+6. **Inflation-Indexed Civilian Parity and Protected Job Return ($\ge 6$ Months):** Whilst serving on a Council, a sorted citizen receives a public stipend equal to their prior civilian earnings indexed to official CPI, followed by **guaranteed reinstatement to their original post with at least 180 days (6 months) of protected employment stability**.
+7. **Closed Macroeconomic Plebiscites and Exact Labour-Share Conservation:** Direct popular voting occurs solely within a closed cybernetic protocol over **quantitative macroeconomic resource allocations** (e.g. `+5% Public Education` vs `+5% Public Health`), binding compulsorily upon all Councils and mapping directly into embedded labour-time shares.
 
 ---
 
-## 3. Logical and Decision‑Theoretic Critique of Electoral Coercion and the "Lesser‑Evil" Fallacy
+## 2. Structural Critique of Electoral Selection Mechanisms
 
-Electoral systems often label abstainers and null voters as practising “moral purism”, “omission”, or refusing to choose the “lesser evil”. **CIBERSOC** dismantles this narrative through three rigorous, pedagogical arguments.
+Following Aristotle (*Politics*, IV.1294b) and contemporary public-choice and mechanism-design analysis, **contested elections operate structurally as capital-weighted selection filters rather than unbiased representative estimators**. Electoral selection exhibits four structural failure modes:
+1. **Economic Pre-Filtering:** Mass campaigns require capital-intensive media, micro-targeting, and organisational funding, allowing concentrated economic actors to filter viable candidates prior to ballot day.
+2. **Principal–Agent Divergence (Career Politician Incentives):** Voluntary candidacy and re-election create a professionalised caste maximising $U_{\text{agent}} = \alpha P(\text{re-election}) + \beta R_{\text{rents}} + \gamma C_{\text{coalition}}$ rather than social welfare.
+3. **Dimensionality Compression:** Compressing millions of technical and intertemporal trade-offs into a scalar vote for a personality rewards polarisation and rhetorical signalling over engineering rigour.
+4. **Myopic Temporal Discounting:** Four-year electoral cycles impose steep intertemporal discounting, penalising infrastructure, decarbonisation, and scientific programmes whose costs fall in $t \in [1, 3]$ whilst benefits mature in $t > 4$.
 
-### 3.1 Probabilistic Irrelevance of a Single Ballot — Full Proof via Hoeffding’s Inequality
+---
+
+## 3. Decision-Theoretic Analysis of Mass Elections vs. Sortition and Allocative Plebiscites
+
+### 3.1 Probabilistic Irrelevance of a Single Candidate Ballot — Lower-Tail Proof via Hoeffding's Inequality
 
 #### Parameter Definitions
 
-Consider an election with:
+Consider a binary mass election with:
+- $N = 1.58 \times 10^{8}$ — participating voters (Brazil national scale)
+- $p = 0.51$ — expected vote share of the leading candidate (a narrow 1% lead above a tie)
+- $p - 0.5 = 0.01$ — margin above an exact tie
 
-- $N = 1.58 \times 10^{8}$ — registered voters (Brazil 2022)
-- $p = 0.51$ — share of votes for the winning candidate (minimum 1% margin)
-- $p - 0.5 = 0.01$ — margin above a technical tie
+When is a single individual's ballot **decisive (*pivotal*)**? Only when the remaining $n = N - 1$ ballots split into an exact tie (or one-vote deficit), meaning the sum of votes for the leading candidate among the other $N - 1$ voters satisfies $S_{N-1} \le \frac{N - 1}{2}$.
 
-The central question: what is the probability that **a single vote** is the deciding (*pivotal*) ballot?
+#### Lower-Tail Hoeffding Bound
 
-#### Hoeffding’s Inequality
+Let $X_1, \ldots, X_{N-1} \in \{0, 1\}$ denote independent Bernoulli ballots with expectation $\mathbb{E}[S_{N-1}] = (N - 1)p$. Since $p = 0.51 > 0.50$, reaching a tie $S_{N-1} \le \frac{N - 1}{2}$ requires a **lower-tail** downward deviation of magnitude $t = (N - 1)(p - 0.5) > 0$ below the mean:
 
-For $n$ independent Bernoulli variables $X_1, \ldots, X_n \in \{0,1\}$ with mean $\mu$, Hoeffding’s inequality guarantees that the sum $S_n = X_1 + \cdots + X_n$ deviates from its expected value by $t = n(p-0.5)$ with probability at most:
+$$P_{\text{pivotal}} \le P\!\left(S_{N-1} \le \frac{N - 1}{2}\right) = P\!\left(S_{N-1} - \mathbb{E}[S_{N-1}] \le -(N - 1)(p - 0.5)\right)$$
 
-$$P\!\left(\,S_n \ge n p\,\right) \le \exp\!\left(-2\,\frac{t^2}{n \cdot (b-a)^2}\right)$$
+For bounded variables $X_i \in [a, b] = [0, 1]$ where $(b - a)^2 = 1$, Hoeffding's lower-tail inequality states $P(S_n - \mathbb{E}[S_n] \le -t) \le \exp\!\left(-2 t^2 / n\right)$, yielding:
 
-For binary $\in \{0, 1\}$ variables, $(b - a)^2 = 1$, so the bound simplifies directly to:
+$$P_{\text{pivotal}} \le \exp\!\left(-2\,(N - 1)\,(p - 0.5)^2\right) \approx \exp\!\left(-2\,N\,(p - 0.5)^2\right)$$
 
-$$P_{\text{pivotal}} \le \exp\!\left(-2\,N\,(p - 0.5)^2\right)$$
+> **Why the factor of 2?** Each Bernoulli variable $X_i \in \{0, 1\}$ has variance $p(1 - p) \le \tfrac{1}{4}$. Hoeffding's lemma bounds the moment-generating function $\mathbb{E}[e^{\lambda(X_i - p)}] \le e^{\lambda^2 (b - a)^2 / 8}$; optimising the Chernoff parameter $\lambda = -4t / n$ yields $-2 t^2 / n$ in the exponent, providing a distribution-free upper bound that never underestimates tail risk.
 
-> **Why the factor of 2?** Each vote $X_i \in \{0,1\}$ is a Bernoulli variable with variance $p(1-p) \le \tfrac{1}{4}$. Hoeffding’s bound incorporates $1/(b-a)^2 = 1/(1-0)^2 = 1$, which consolidates two algebraic factors — the variance-transformation theorem and amplitude normalisation — into a single coefficient of 2 in the exponent. The result is strictly more conservative (a larger probability bound) than a Gaussian approximation, ensuring the bound never underestimates the risk.
-
-#### Step-by-Step Calculation
+#### Step-by-Step Numerical Evaluation
 
 | Step | Operation | Result |
 |:-----|:----------|:-------|
 | 1 | Margin above tie | $p - 0.5 = 0.01$ |
 | 2 | Margin squared | $(0.01)^2 = 10^{-4}$ |
-| 3 | Multiply by $2N$ | $2 \times 1.58 \times 10^8 \times 10^{-4} = 31\,600$ |
-| 4 | Apply negative exponent | $e^{-31\,600}$ |
-| 5 | Convert to base 10 | $10^{-31\,600 / \ln 10} = 10^{-31\,600 / 2.3026} \approx 10^{-13\,723}$ |
-
-Therefore:
+| 3 | Multiply by $2(N - 1)$ | $2 \times (1.58 \times 10^8 - 1) \times 10^{-4} \approx 31\,600$ |
+| 4 | Evaluate exponential bound | $e^{-31\,600}$ |
+| 5 | Convert to base 10 | $10^{-31\,600 / \ln 10} = 10^{-31\,600 / 2.302585} \approx 10^{-13\,723}$ |
 
 $$\boxed{P_{\text{pivotal}} \le e^{-31\,600} \approx 10^{-13\,723}}$$
 
-#### Physical Universe Scale — Comparison
-
-To contextualise the magnitude of this number:
+#### Physical Scale Comparison
 
 | Physical Reference | Order of Magnitude |
 |:-------------------|:-------------------|
-| Probability of a pivotal vote | $\approx 10^{-13\,723}$ |
+| Probability of a pivotal ballot in a 1%-margin national election | $\approx 10^{-13\,723}$ |
 | Observable atoms in the universe | $\approx 10^{80}$ |
-| Planck volumes in the observable universe | $\approx 10^{185}$ |
-| Cosmic-ray bit-flip probability | $\approx 10^{-15}$ |
+| Planck space-time volumes in the observable universe | $\approx 10^{185}$ |
+| Single-event cosmic-ray RAM bit-flip during 1 hour | $\approx 10^{-15}$ |
 
-A cosmic ray flipping a single memory bit whilst you read this document — a **measurable** laboratory phenomenon — is literally trillions upon trillions of times more probable than a single vote changing the outcome of a mass election.
+$$P_{\text{pivotal}} \approx \underbrace{0.\overbrace{00\cdots0}^{13\,722\ \text{zeros}}1}_{\text{13\,722 consecutive zeros after the decimal point}}$$
 
-#### Visual Decimal Representation
+Consequently, the expected causal effect of an individual candidate ballot on who governs is computationally indistinguishable from zero:
 
-$$P_{\text{pivotal}} \approx \underbrace{0.\overbrace{00\cdots0}^{13\,722\ \text{zeros}}1}_{\text{13\,722 zeros after the decimal point}}$$
+$$\mathbb{E}\!\left[\Delta\text{Ruler} \mid \text{ballot}_i\right] \approx 0$$
 
-#### Linear Arithmetic (Without Scientific Notation)
+#### Symmetric Dual Corollary: Exponential Concentration of Demarchic Sortition
 
-Written out without exponents: to reach the first significant digit one would write the digit zero more than **thirteen thousand seven hundred and twenty-two consecutive times**. The total number of atoms in the observable universe — commonly regarded as the largest number in everyday physics — has only 80 digits.
+Crucially, the **exact same lower-tail Hoeffding inequality** explains why **stratified statistical sortition** succeeds where candidate elections fail. Suppose a deliberative council of $n$ citizens is drawn uniformly without replacement from a population in which the baseline share of citizens acting in civic good faith is $p > 0.5$. Because sampling without replacement from a finite population is *negatively associated* (Hoeffding, 1963, Theorem 4), it satisfies the same Chernoff–Hoeffding tail bound as independent sampling: the probability that an adverse faction captures a majority ($\le n/2$ civic-aligned councillors) is bounded above by:
 
-#### Causal Verdict
+$$P_{\text{capture}}(n) \le \exp\!\left(-2\,n\,(p - 0.5)^2\right)$$
 
-Because the probability of being the decisive voter is indistinguishable from zero, the expected causal effect of any individual vote on the election outcome is:
+As council size $n$ grows across federated assemblies (and across repeated independent cycles with mandatory quarantine), deliberative alignment concentrates exponentially around the true population median without a single unit of campaign capital.
 
-$$\mathbb{E}\!\left[\Delta\text{Outcome} \mid \text{vote}_i\right] = 0$$
+### 3.2 Asymmetry Between Zero Individual Pivotal Power and Aggregate Legitimisation
+- In candidate elections, an individual ballot exercises zero pivotal control over *who rules*, yet aggregate turnout supplies institutional legitimisation for a candidate slate pre-filtered by campaign finance.
+- Compulsory turnout rules rely on administrative penalties precisely because individual voters face zero expected instrumental return on candidate selection.
 
-Accusing abstainers of “failing to change practical reality” therefore commits the elementary logical error known as the **voter’s illusion**: attributing practical causal power to an event whose probability is indistinguishable from zero.
-
-### 3.2 Asymmetry Between Zero Causal Power and Systemic Legitimisation
-- A single ballot cannot decide *who governs*, yet the **aggregate turnout** creates a veneer of legitimacy for a pre‑filtered list of candidates that have been selected by private capital.
-- This legitimacy triggers **post‑decision cognitive dissonance**: voters rationalise policies that may be detrimental to their own material interests because they perceive the elected body as legitimate.
-- In other words, *participation confers legitimacy* regardless of the actual causal impact of any one vote.
-
-### 3.3 Logical Exposure of Compulsory Voting vs. Positive Marginal Weight in CIBERSOC
-- **Compulsory voting** relies on fines, civil restrictions and periodic intimidation to force turnout. Its very existence reveals a lack of *voluntary* legitimacy – the state must coerce citizens to vote.
-- **Rational abstention** in such a system is a logical refusal to endorse a contract that is rigged by capital and coercion.
-- **CIBERSOC’s alternative:** Citizens never vote for rulers. They vote *only* on quantitative budget allocations (e.g., “increase public health spending by 5 %”).
-- Because each ballot directly changes a measurable allocation, Cockshott’s continuous rule guarantees a **non‑zero marginal derivative** for every vote:
-  $$\frac{\partial \Delta}{\partial v_i} \neq 0.$$
-- Hence every ballot has *real* marginal impact, eliminating the “lesser‑evil” paradox.
+### 3.3 Non-Zero Marginal Weight and Labour-Share Conservation in CIBERSOC Plebiscites
+- In **CIBERSOC**, citizens never vote for rulers; they vote exclusively on **continuous macroeconomic budget shares** (e.g. shifting resources between Education and Health).
+- Under Cockshott's continuous shift rule (`continuous_shift = ((ratio - 0.5) * 2) * max_shift`), every single ballot shifts the target allocation continuously with strictly non-zero marginal derivative:
+  $$\frac{\partial \Delta_{\text{allocation}}}{\partial v_i} = \frac{2\,\Delta_{\max}}{V_{\text{total}}} \neq 0$$
+- Furthermore, [`derive_final_demand_from_labour_shares`](../../src/cibersoc/cybernetics.py) converts voted sector percentages $s_j \in [0, 100]$ ($\sum_j s_j = 100$) into physical final demand $y_j^* = \frac{(s_j / 100)\,L_{\text{total}}}{H_j}$ using Jacobi embedded-labour values $\mathbf{H} = \mathbf{l}(\mathbf{I} - \mathbf{A})^{-1}$, guaranteeing the exact accounting identity:
+  $$s_j = 100 \cdot \frac{H_j\,y_j^*}{\sum_{k=1}^{n} H_k\,y_k^*} \qquad \text{and} \qquad \sum_{j=1}^{n} H_j\,y_j^* = \sum_{j=1}^{n} \ell_j\,x_j = L_{\text{total}}$$
 
 ---
 
-## 4. Logical and Analytical Defence: Refuting Critiques of Cybernetic Planning and Internal Risks
+## 4. Analytical Defence: Addressing Classical Critiques of Cybernetic Planning & Sortition
 
-| Critique / Vulnerability | Core Objection | Formal Technical, Mathematical and Sociological Refutation in CIBERSOC |
+| Critique / Vulnerability | Core Objection | Formal Mathematical & Institutional Resolution in CIBERSOC |
 | :--- | :--- | :--- |
-| **1. Austrian Dispersed Information Critique** *(Hayek, Lavoie, Brewster)* | Technical coefficients $a_{ij}$ are dispersed across workplaces and allegedly discoverable only via rival private entrepreneurs. | Scalar market prices are *lossy compression* concealing physical bottlenecks and triggering cobweb cycles. Modern production already records structured `BOM`/`ERP`/`GTIN` telemetry across millions of items, whilst **Plural Modular Innovation Funds** reward verified labour‑time savings ($\Delta H > 0$) without private capital ownership. |
-| **2. Dimensionality & Non‑Linearity** *(Nove, Hodgson, Shalizi)* | $n \ge 10^{7}$ products would require $O(n^{3}) \sim 10^{21}$ operations and fail under diminishing returns. | Real industrial matrices are sparse ($m \in [20, 100]$ direct inputs). `CSR` Gauss‑Seidel and Jacobi solvers scale linearly in non‑zeros as $O(n\cdot m\cdot k) \approx 2.4\times10^{10}$ FLOPs (< 1 s), whilst **Cockshott's Asymmetric Harmony** ($H(u) = -u^{2}$ for $u<0$, $\sqrt{u}$ for $u \ge 0$) resolves short‑run capacity ceilings non‑linearly. |
-| **3. Labour‑Time Accounting Critique** *(Postone, Kurz, Heinrich)* | Accounting in labour hours would allegedly reproduce market compulsion under a centralised State. | Confuses blind retrospective market clearing with deliberate prior physical and time budgeting. Under the property bitmask `[1,0,0,0]`, productivity gains ($\downarrow H_i$) directly shorten the working week or expand public goods rather than driving private capital accumulation. |
-| **4. Kornai Soft Budget & Ratchet Effect** *(Kornai, Berliner)* | Plant managers hoard inputs and hide capacity to secure easier future quotas. | **CIBERSOC** abolishes plant directors/CEOs and distributes **100% of net operating surplus equally ($1/N_e$)** to workers: input waste directly lowers every worker's equal payout, whilst cross‑plant mass/energy conservation and *Z‑score* audits expose hoarding. |
-| **5. Skilled Labour & Effort Incentives** *(Roemer, Nove)* | Equal surplus sharing would deter long training or arduous occupations. | Higher education is 100 % publicly funded with living stipends; macro planning accounts for skilled training costs ($1 + R_f$) to prevent misuse of specialists, whilst arduous roles carry transparent base‑pay differentials alongside strictly equal $1/N_e$ surplus shares. |
-| **6. Arrow's Impossibility & Majority Tyranny** *(Arrow, Parecon)* | Direct plebiscites suffer Condorcet cycles and threaten minority needs. | Arrow's theorem applies to unstructured discrete candidates. Over convex continuous budget shares with single‑peaked preferences, **Black's Median Voter Theorem** and Cockshott's continuous shift yield a unique transitive equilibrium bounded by inviolable constitutional health and ecological floors. |
-| **7. Capital‑Intensity Disparity Across Enterprises** *(Comparative Cooperative Critique)* | Capital‑intensive plants could generate higher surplus per worker than labour‑intensive plants without greater effort. | Neutralised in [`enterprise.py`](../../src/cibersoc/enterprise.py) via **`capital_endowment_equalisation_charge`**, deducting a social charge proportional to public capital intensity prior to $1/N_e$ surplus distribution. |
-| **8. Permanent Advisory Capture** *(Technocratic Manipulation Risk)* | Permanent technical staff could manipulate short‑term sorted lay councillors. | Neutralised via mandatory **Independent Competing Expert Panels** (adversarial technical briefs prepared by separately sorted academic/engineering teams), open‑source algorithms and binding popular macroeconomic directives. |
+| **1. Dispersed Knowledge Critique** *(Hayek, Lavoie, Brewster)* | Technical coefficients $a_{ij}$ are dispersed across workplaces and allegedly discoverable only via rival private price signals. | Scalar market prices are lossy projections that mask physical bottlenecks and induce cobweb oscillations. Modern supply chains already record structured `BOM`/`ERP`/`GTIN` telemetry across millions of SKUs, while **Plural Modular Innovation Funds** reward verified labour-time reductions ($\Delta H > 0$) without private equity. |
+| **2. Dimensionality & Non-Linearity** *(Nove, Hodgson, Shalizi)* | $n \ge 10^{7}$ products would require $O(n^{3}) \sim 10^{21}$ dense matrix operations and fail under capacity ceilings. | Real industrial input–output matrices are ultra-sparse ($m \in [20, 100]$ non-zero inputs per product). `CSR` Gauss–Seidel and Jacobi solvers scale linearly in non-zeros as $O(n \cdot m \cdot k) \approx 2.4 \times 10^{10}$ FLOPs, while **Cockshott's Asymmetric Harmony** ($H(u) = -u^{2}$ for $u < 0$, $\sqrt{u}$ for $u \ge 0$) resolves short-run capacity ceilings non-linearly. |
+| **3. Labour-Time Accounting Critique** *(Postone, Kurz, Heinrich)* | Accounting in labour hours would allegedly reproduce blind market compulsion under state administration. | Distinguishes retrospective market clearing from deliberate *ex-ante* physical and ecological budgeting. Under the usufruct bitmask `[1,0,0,0]`, productivity gains ($\downarrow H_i$) directly shorten working hours or expand universal public goods rather than compounding private capital. |
+| **4. Soft Budget Constraint & Ratchet Effect** *(Kornai, Berliner)* | Plant directors hoard inputs and under-report capacity to secure lenient future quotas. | **CIBERSOC** eliminates executive directors/CEOs and distributes **100% of net operating surplus equally ($1/N_e$)** to active workers: input waste directly lowers every worker's equal payout, while cross-plant physical conservation audits expose hoarding. |
+| **5. Skilled Labour & Effort Incentives** *(Roemer, Nove)* | Equal surplus sharing would deter lengthy technical training or arduous work. | Higher education is 100% publicly funded with living stipends; macro planning accounts for specialist training multipliers ($1 + R_f$), and arduous roles carry transparent base-compensation differentials alongside strictly equal $1/N_e$ net surplus shares. |
+| **6. Arrow's Impossibility & Majority Cycling** *(Arrow, Social Choice)* | Direct voting can exhibit Condorcet cycles over unstructured alternatives. | Arrow's theorem applies to unrestricted discrete preference orderings. Over convex continuous budget shares with single-peaked preferences, **Black's Median Voter Theorem** and continuous mean-aggregation yield a unique transitive equilibrium bounded by constitutional health, rights, and carbon floors. |
+| **7. Capital-Intensity Disparity Across Cooperatives** *(Ward–Vanek Critique)* | Capital-intensive plants could yield higher surplus per worker than labour-intensive plants without greater effort. | Neutralised in [`enterprise.py`](../../src/cibersoc/enterprise.py) via **`capital_endowment_equalisation_charge`**, deducting a Ricardian social charge proportional to public capital intensity prior to $1/N_e$ distribution. |
+| **8. Permanent Bureaucratic Advisory Capture** *(Weberian Technocracy Risk)* | Permanent technical staff could steer short-term sorted lay councillors. | Neutralised via **Independent Competing Expert Panels**, periodic **Civic Enablement Exams** ([`civic_exam.py`](../../src/cibersoc/civic_exam.py)) qualifying citizens for technical audit roles, open-source solvers, and binding popular macro-allocations. |

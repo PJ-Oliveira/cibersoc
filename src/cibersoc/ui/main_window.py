@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QBoxLayout,
     QComboBox,
     QDialog,
+    QDoubleSpinBox,
     QFileDialog,
     QFrame,
     QGroupBox,
@@ -112,6 +113,9 @@ class ResponsivePushButton(QPushButton):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._full_text = ""
 
+    def text(self) -> str:
+        return super().text().replace("&&", "&")
+
     def setText(self, text: str) -> None:
         self._full_text = text
         self.setToolTip(text)
@@ -128,7 +132,7 @@ class ResponsivePushButton(QPushButton):
             self._full_text, Qt.TextElideMode.ElideRight, available_width
         )
         if elided_text != self.text():
-            QPushButton.setText(self, elided_text)
+            QPushButton.setText(self, elided_text.replace("&", "&&"))
 
     def minimumSizeHint(self) -> QSize:
         natural_hint = super().minimumSizeHint()
@@ -139,6 +143,12 @@ class ResponsivePushButton(QPushButton):
 
 
 class ResponsiveGroupBox(QGroupBox):
+    def setTitle(self, title: str) -> None:
+        super().setTitle(title.replace("&", "&&"))
+
+    def title(self) -> str:
+        return super().title().replace("&&", "&")
+
     def minimumSizeHint(self) -> QSize:
         natural_hint = super().minimumSizeHint()
         return QSize(min(260, natural_hint.width()), natural_hint.height())
@@ -151,10 +161,30 @@ class CiberSocMainWindow(QMainWindow):
         translator: LocalizationCatalog | None = None,
         font_points: int | None = None,
         settings: QSettings | None = None,
+        dialog_presenter: Callable[[QDialog], int] | None = None,
+        url_opener: Callable[[QUrl], bool] | None = None,
+        save_file_dialog: Callable[..., tuple[str, str]] | None = None,
+        headless_detector: Callable[[], bool] | None = None,
+        checkpoint_data_root: Path | None = None,
     ) -> None:
         super().__init__()
         register_bundled_fonts()
         self._settings = settings
+        self._dialog_presenter: Callable[[QDialog], int] = (
+            dialog_presenter if dialog_presenter is not None else QDialog.exec
+        )
+        self._url_opener: Callable[[QUrl], bool] = (
+            url_opener if url_opener is not None else QDesktopServices.openUrl
+        )
+        self._save_file_dialog: Callable[..., tuple[str, str]] = (
+            save_file_dialog if save_file_dialog is not None else QFileDialog.getSaveFileName
+        )
+        self._headless_detector: Callable[[], bool] = (
+            headless_detector
+            if headless_detector is not None
+            else lambda: QApplication.platformName() == "offscreen"
+        )
+        self._checkpoint_data_root = checkpoint_data_root
         if font_points is not None:
             initial_font_points = font_points
         elif settings is not None:
@@ -223,15 +253,17 @@ class CiberSocMainWindow(QMainWindow):
         self.header_box_layout.addLayout(title_column, stretch=1)
 
         controls_column = QVBoxLayout()
-        language_row = QHBoxLayout()
+        self.language_row = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self._adaptive_box_layouts.append(self.language_row)
         self.lbl_language_prompt = QLabel()
-        language_row.addWidget(self.lbl_language_prompt)
+        self.language_row.addWidget(self.lbl_language_prompt)
 
         self.cmb_language = QComboBox()
         self.cmb_language.setSizeAdjustPolicy(
             QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
         )
-        self.cmb_language.setMinimumContentsLength(12)
+        self.cmb_language.setMinimumContentsLength(14)
+        self.cmb_language.setMinimumWidth(235)
         for supported_locale in SupportedLocale:
             self.cmb_language.addItem(
                 self.translator.translate(f"locale.{supported_locale.value}"),
@@ -240,13 +272,12 @@ class CiberSocMainWindow(QMainWindow):
         active_index = self.cmb_language.findData(self.translator.active_locale.value)
         self.cmb_language.setCurrentIndex(active_index)
         self.cmb_language.currentIndexChanged.connect(self._on_language_selector_changed)
-        language_row.addWidget(self.cmb_language)
+        self.language_row.addWidget(self.cmb_language, stretch=1)
 
         self.lbl_cycle_badge = QLabel()
         self.lbl_cycle_badge.setObjectName("SectionHeading")
-        language_row.addWidget(self.lbl_cycle_badge)
-        language_row.addStretch(0)
-        controls_column.addLayout(language_row)
+        self.language_row.addWidget(self.lbl_cycle_badge)
+        controls_column.addLayout(self.language_row)
 
         font_row = QHBoxLayout()
         self.lbl_font_size = QLabel()
@@ -272,6 +303,11 @@ class CiberSocMainWindow(QMainWindow):
         self._navigation_shortcuts: tuple[QShortcut, ...] = (
             self._bind_shortcut(Qt.Key.Key_F1, self._show_shortcuts_dialog),
             self._bind_shortcut(QKeySequence("?"), self._show_shortcuts_dialog),
+            self._bind_shortcut(Qt.Key.Key_F11, self._toggle_fullscreen),
+            self._bind_shortcut(QKeySequence("Alt+Up"), lambda: self._step_council_selection(-1)),
+            self._bind_shortcut(QKeySequence("Alt+Down"), lambda: self._step_council_selection(1)),
+            self._bind_shortcut(QKeySequence("+"), lambda: self._zoom_3d_if_active(True)),
+            self._bind_shortcut(QKeySequence("-"), lambda: self._zoom_3d_if_active(False)),
             self._bind_shortcut(QKeySequence("Ctrl+1"), lambda: self.tabs.setCurrentIndex(0)),
             self._bind_shortcut(QKeySequence("Ctrl+2"), lambda: self.tabs.setCurrentIndex(1)),
             self._bind_shortcut(QKeySequence("Ctrl+3"), lambda: self.tabs.setCurrentIndex(2)),
@@ -352,7 +388,7 @@ class CiberSocMainWindow(QMainWindow):
         dialog_layout.addWidget(intro)
 
         table = QTableWidget(5, 2, dialog)
-        table.setHorizontalHeaderLabels(["Shortcut", "Action"])
+        table.setHorizontalHeaderLabels([t("dialog.col_shortcut"), t("dialog.col_action")])
         table.horizontalHeader().setStretchLastSection(True)
         table.verticalHeader().setVisible(False)
         table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -381,7 +417,24 @@ class CiberSocMainWindow(QMainWindow):
         btn_row.addWidget(btn_close)
         dialog_layout.addLayout(btn_row)
 
-        dialog.exec()
+        self._dialog_presenter(dialog)
+
+    def _toggle_fullscreen(self) -> None:
+        if self.isFullScreen():
+            self.showNormal()
+        else:
+            self.showFullScreen()
+
+    def _step_council_selection(self, delta: int) -> None:
+        next_idx = (self.cmb_council.currentIndex() + delta) % self.cmb_council.count()
+        self.cmb_council.setCurrentIndex(next_idx)
+
+    def _zoom_3d_if_active(self, zoom_in: bool) -> None:
+        if self.tabs.currentIndex() == 5:
+            if zoom_in:
+                self.simulation_tab.zoom_in()
+            else:
+                self.simulation_tab.zoom_out()
 
     @property
     def font_points(self) -> int:
@@ -524,6 +577,35 @@ class CiberSocMainWindow(QMainWindow):
         ministries_layout.addWidget(self.tbl_ministries)
         right_column.addWidget(self.grp_ministries, stretch=1)
 
+        self.grp_jury_security = ResponsiveGroupBox()
+        jury_sec_layout = QVBoxLayout(self.grp_jury_security)
+        self.lbl_jury_security_status = QLabel()
+        self.lbl_jury_security_status.setWordWrap(True)
+        jury_sec_layout.addWidget(self.lbl_jury_security_status)
+
+        self.jury_button_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self._adaptive_box_layouts.append(self.jury_button_layout)
+        self.btn_jury_adjudicate = ResponsivePushButton()
+        self.btn_jury_adjudicate.clicked.connect(self._on_jury_adjudicate)
+        self.btn_jury_block = ResponsivePushButton()
+        self.btn_jury_block.setObjectName("AlertActionButton")
+        self.btn_jury_block.clicked.connect(self._on_jury_monocratic_test)
+        self.jury_button_layout.addWidget(self.btn_jury_adjudicate)
+        self.jury_button_layout.addWidget(self.btn_jury_block)
+        jury_sec_layout.addLayout(self.jury_button_layout)
+
+        self.security_button_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self._adaptive_box_layouts.append(self.security_button_layout)
+        self.btn_security_dispatch = ResponsivePushButton()
+        self.btn_security_dispatch.clicked.connect(self._on_security_dispatch)
+        self.btn_security_block = ResponsivePushButton()
+        self.btn_security_block.setObjectName("AlertActionButton")
+        self.btn_security_block.clicked.connect(self._on_security_warrantless_test)
+        self.security_button_layout.addWidget(self.btn_security_dispatch)
+        self.security_button_layout.addWidget(self.btn_security_block)
+        jury_sec_layout.addLayout(self.security_button_layout)
+        right_column.addWidget(self.grp_jury_security)
+
         self.grp_defence = ResponsiveGroupBox()
         defence_layout = QVBoxLayout(self.grp_defence)
         self.lbl_defence_status = QLabel()
@@ -569,6 +651,22 @@ class CiberSocMainWindow(QMainWindow):
         self.sortition_button_layout.addWidget(self.btn_block_election)
         controls_layout.addLayout(self.sortition_button_layout)
         layout.addWidget(self.grp_sortition_controls)
+
+        self.grp_civic_enablement = ResponsiveGroupBox()
+        civic_layout = QVBoxLayout(self.grp_civic_enablement)
+        self.lbl_civic_summary = QLabel()
+        self.lbl_civic_summary.setWordWrap(True)
+        civic_layout.addWidget(self.lbl_civic_summary)
+        self.civic_button_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self._adaptive_box_layouts.append(self.civic_button_layout)
+        self.btn_civic_round = ResponsivePushButton()
+        self.btn_civic_round.clicked.connect(self._on_run_civic_round)
+        self.btn_save_checkpoint = ResponsivePushButton()
+        self.btn_save_checkpoint.clicked.connect(self._on_save_checkpoint)
+        self.civic_button_layout.addWidget(self.btn_civic_round)
+        self.civic_button_layout.addWidget(self.btn_save_checkpoint)
+        civic_layout.addLayout(self.civic_button_layout)
+        layout.addWidget(self.grp_civic_enablement)
 
         self.grp_sortition_proofs = ResponsiveGroupBox()
         proofs_layout = QVBoxLayout(self.grp_sortition_proofs)
@@ -627,6 +725,38 @@ class CiberSocMainWindow(QMainWindow):
         self.lbl_cyber_metrics.setWordWrap(True)
         plebiscite_layout.addWidget(self.lbl_cyber_metrics)
         layout.addWidget(self.grp_plebiscite)
+
+        self.grp_cyber_feedback = ResponsiveGroupBox()
+        feedback_layout = QVBoxLayout(self.grp_cyber_feedback)
+        self.cyber_feedback_controls = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self._adaptive_box_layouts.append(self.cyber_feedback_controls)
+        self.lbl_clearing_ratio = QLabel()
+        self.cyber_feedback_controls.addWidget(self.lbl_clearing_ratio)
+        self.spn_clearing_ratio = QDoubleSpinBox()
+        self.spn_clearing_ratio.setRange(0.50, 1.80)
+        self.spn_clearing_ratio.setSingleStep(0.05)
+        self.spn_clearing_ratio.setDecimals(2)
+        self.spn_clearing_ratio.setValue(self.orchestrator.market_clearing_ratio)
+        self.cyber_feedback_controls.addWidget(self.spn_clearing_ratio)
+
+        self.lbl_carbon_budget = QLabel()
+        self.cyber_feedback_controls.addWidget(self.lbl_carbon_budget)
+        self.spn_carbon_budget = QDoubleSpinBox()
+        self.spn_carbon_budget.setRange(10.0, 1000.0)
+        self.spn_carbon_budget.setSingleStep(25.0)
+        self.spn_carbon_budget.setDecimals(1)
+        self.spn_carbon_budget.setValue(self.orchestrator.carbon_budget_megatons)
+        self.cyber_feedback_controls.addWidget(self.spn_carbon_budget)
+
+        self.btn_iterate_plan = ResponsivePushButton()
+        self.btn_iterate_plan.clicked.connect(self._on_iterate_cybernetic_plan)
+        self.cyber_feedback_controls.addWidget(self.btn_iterate_plan)
+        feedback_layout.addLayout(self.cyber_feedback_controls)
+
+        self.lbl_cyber_feedback = QLabel()
+        self.lbl_cyber_feedback.setWordWrap(True)
+        feedback_layout.addWidget(self.lbl_cyber_feedback)
+        layout.addWidget(self.grp_cyber_feedback)
 
         self.grp_cyber_matrix = ResponsiveGroupBox()
         matrix_layout = QVBoxLayout(self.grp_cyber_matrix)
@@ -714,15 +844,16 @@ class CiberSocMainWindow(QMainWindow):
         self.lbl_charter_emblem_art.setAlignment(Qt.AlignmentFlag.AlignCenter)
         box_layout.addWidget(self.lbl_charter_emblem_art)
 
-        actions_row = QHBoxLayout()
+        self.charter_actions_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self._adaptive_box_layouts.append(self.charter_actions_layout)
         self.btn_run_audit = ResponsivePushButton()
         self.btn_run_audit.clicked.connect(self._on_run_integrity_audit)
-        actions_row.addWidget(self.btn_run_audit, stretch=1)
+        self.charter_actions_layout.addWidget(self.btn_run_audit, stretch=1)
 
         self.btn_export_fullhd_wallpaper = ResponsivePushButton()
         self.btn_export_fullhd_wallpaper.clicked.connect(self._on_export_fullhd_wallpaper)
-        actions_row.addWidget(self.btn_export_fullhd_wallpaper, stretch=1)
-        box_layout.addLayout(actions_row)
+        self.charter_actions_layout.addWidget(self.btn_export_fullhd_wallpaper, stretch=1)
+        box_layout.addLayout(self.charter_actions_layout)
 
         self.txt_charter_report = QPlainTextEdit()
         self.txt_charter_report.setReadOnly(True)
@@ -733,9 +864,10 @@ class CiberSocMainWindow(QMainWindow):
         self.grp_readme = ResponsiveGroupBox()
         readme_layout = QVBoxLayout(self.grp_readme)
 
-        controls_row = QHBoxLayout()
+        self.doc_controls_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self._adaptive_box_layouts.append(self.doc_controls_layout)
         self.lbl_doc_selector = QLabel()
-        controls_row.addWidget(self.lbl_doc_selector)
+        self.doc_controls_layout.addWidget(self.lbl_doc_selector)
 
         self.cmb_doc_selector = QComboBox()
         self.cmb_doc_selector.setSizeAdjustPolicy(
@@ -743,13 +875,13 @@ class CiberSocMainWindow(QMainWindow):
         )
         self.cmb_doc_selector.setMinimumContentsLength(20)
         self.cmb_doc_selector.currentIndexChanged.connect(self._on_doc_selector_changed)
-        controls_row.addWidget(self.cmb_doc_selector, stretch=1)
+        self.doc_controls_layout.addWidget(self.cmb_doc_selector, stretch=1)
 
         self.btn_open_readme = QPushButton()
         self.btn_open_readme.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
         self.btn_open_readme.clicked.connect(self._on_open_readme_clicked)
-        controls_row.addWidget(self.btn_open_readme)
-        readme_layout.addLayout(controls_row)
+        self.doc_controls_layout.addWidget(self.btn_open_readme)
+        readme_layout.addLayout(self.doc_controls_layout)
 
         self.txt_readme_browser = QTextBrowser()
         self.txt_readme_browser.setOpenLinks(False)
@@ -763,6 +895,7 @@ class CiberSocMainWindow(QMainWindow):
 
     def _build_simulation_workspace(self) -> None:
         self.simulation_tab = SimulationTab(translator=self.translator)
+        self._adaptive_box_layouts.extend(self.simulation_tab.adaptive_layouts)
         self._add_scrollable_tab(self.simulation_tab)
 
     def _resolve_doc_path_for_key(self, doc_key: str) -> Path:
@@ -905,18 +1038,19 @@ class CiberSocMainWindow(QMainWindow):
         self.btn_font_increase.setToolTip(t("header.font_increase_tip"))
         self.btn_font_reset.setToolTip(t("header.font_reset_tip"))
 
-        self.tabs.setTabText(0, t("tabs.councils"))
-        self.tabs.setTabText(1, t("tabs.sortition"))
-        self.tabs.setTabText(2, t("tabs.cybernetics"))
-        self.tabs.setTabText(3, t("tabs.enterprise"))
-        self.tabs.setTabText(4, t("tabs.charter_docs"))
-        self.tabs.setTabText(5, t("tabs.simulation"))
-        self.tabs.setTabToolTip(0, t("tabs.councils"))
-        self.tabs.setTabToolTip(1, t("tabs.sortition"))
-        self.tabs.setTabToolTip(2, t("tabs.cybernetics"))
-        self.tabs.setTabToolTip(3, t("tabs.enterprise"))
-        self.tabs.setTabToolTip(4, t("tabs.charter_docs"))
-        self.tabs.setTabToolTip(5, t("tabs.simulation"))
+        for tab_idx, tab_key in enumerate(
+            (
+                "tabs.councils",
+                "tabs.sortition",
+                "tabs.cybernetics",
+                "tabs.enterprise",
+                "tabs.charter_docs",
+                "tabs.simulation",
+            )
+        ):
+            tab_label = t(tab_key)
+            self.tabs.setTabText(tab_idx, tab_label.replace("&", "&&"))
+            self.tabs.setTabToolTip(tab_idx, tab_label)
 
         self.grp_mesh.setTitle(t("councils.mesh_group"))
         self.lbl_inspect_tier.setText(t("councils.inspect_label"))
@@ -934,6 +1068,11 @@ class CiberSocMainWindow(QMainWindow):
                 t("councils.col_members"),
             ]
         )
+        self.grp_jury_security.setTitle(t("councils.jury_security_group"))
+        self.btn_jury_adjudicate.setText(t("councils.btn_jury_adjudicate"))
+        self.btn_jury_block.setText(t("councils.btn_jury_block"))
+        self.btn_security_dispatch.setText(t("councils.btn_security_dispatch"))
+        self.btn_security_block.setText(t("councils.btn_security_block"))
         self.grp_defence.setTitle(t("councils.defence_group"))
         self.btn_defence_order.setText(t("councils.btn_defence_order"))
         self.btn_defence_block.setText(t("councils.btn_defence_block"))
@@ -941,6 +1080,9 @@ class CiberSocMainWindow(QMainWindow):
         self.grp_sortition_controls.setTitle(t("sortition.group_controls"))
         self.btn_next_cycle.setText(t("sortition.btn_next_cycle"))
         self.btn_block_election.setText(t("sortition.btn_block_election"))
+        self.grp_civic_enablement.setTitle(t("sortition.civic_group"))
+        self.btn_civic_round.setText(t("sortition.btn_civic_round"))
+        self.btn_save_checkpoint.setText(t("sortition.btn_save_checkpoint"))
         self.grp_sortition_proofs.setTitle(t("sortition.group_proofs"))
         self.tbl_proofs.setHorizontalHeaderLabels(
             [
@@ -959,6 +1101,10 @@ class CiberSocMainWindow(QMainWindow):
         self.btn_run_plebiscite.setText(t("cyber.btn_run_plebiscite"))
         self.btn_block_person_pleb.setText(t("cyber.btn_block_person"))
         self.btn_block_council_override.setText(t("cyber.btn_block_override"))
+        self.grp_cyber_feedback.setTitle(t("cyber.group_feedback"))
+        self.lbl_clearing_ratio.setText(t("cyber.clearing_ratio_label"))
+        self.lbl_carbon_budget.setText(t("cyber.carbon_budget_label"))
+        self.btn_iterate_plan.setText(t("cyber.btn_iterate_plan"))
         self.grp_cyber_matrix.setTitle(t("cyber.group_matrix"))
         self.tbl_cyber.setHorizontalHeaderLabels(
             [
@@ -1073,6 +1219,22 @@ class CiberSocMainWindow(QMainWindow):
         self.orchestrator.test_secretary_autocratic_block(self._selected_council_id())
         self.refresh_all_views()
 
+    def _on_jury_adjudicate(self) -> None:
+        self.orchestrator.adjudicate_popular_jury_case(self._selected_council_id())
+        self.refresh_all_views()
+
+    def _on_jury_monocratic_test(self) -> None:
+        self.orchestrator.test_monocratic_sentence_block(self._selected_council_id())
+        self.refresh_all_views()
+
+    def _on_security_dispatch(self) -> None:
+        self.orchestrator.dispatch_public_security_action(self._selected_council_id())
+        self.refresh_all_views()
+
+    def _on_security_warrantless_test(self) -> None:
+        self.orchestrator.test_warrantless_security_block(self._selected_council_id())
+        self.refresh_all_views()
+
     def _on_defence_valid_order(self) -> None:
         self.orchestrator.issue_valid_civil_defence_order()
         self.refresh_all_views()
@@ -1090,10 +1252,28 @@ class CiberSocMainWindow(QMainWindow):
         self.orchestrator.test_electoral_candidacy_block()
         self.refresh_all_views()
 
+    def _on_run_civic_round(self) -> None:
+        self.orchestrator.run_civic_enablement_round()
+        self.refresh_all_views()
+
+    def _on_save_checkpoint(self) -> None:
+        self.orchestrator.save_orchestrator_checkpoint(
+            "ui_snapshot", data_root=self._checkpoint_data_root
+        )
+        self.refresh_all_views()
+
     def _on_run_plebiscite(self) -> None:
         self.orchestrator.execute_macro_plebiscite(
             votes_education=self.spn_votes_edu.value(),
             votes_health=self.spn_votes_health.value(),
+        )
+        self.refresh_all_views()
+
+    def _on_iterate_cybernetic_plan(self) -> None:
+        self.orchestrator.execute_interactive_plan_iteration(
+            clearing_ratio=float(self.spn_clearing_ratio.value()),
+            carbon_budget_megatons=float(self.spn_carbon_budget.value()),
+            record_event=True,
         )
         self.refresh_all_views()
 
@@ -1160,7 +1340,7 @@ class CiberSocMainWindow(QMainWindow):
                 "councils.sg_summary",
                 citizen_id=secretary_profile.citizen_id,
                 full_name=secretary_profile.full_name,
-                stratum=secretary_profile.stratum_key,
+                stratum=t(f"stratum.{secretary_profile.stratum_key}"),
                 tier=t(f"tier.{council.tier.value}"),
                 weight=council.secretary_general.voting_weight,
             )
@@ -1195,6 +1375,15 @@ class CiberSocMainWindow(QMainWindow):
             self.tbl_ministries.setItem(row_index, 2, QTableWidgetItem(bond_label))
             self.tbl_ministries.setItem(row_index, 3, QTableWidgetItem(str(len(chamber_members))))
 
+        self.lbl_jury_security_status.setText(
+            t(
+                "councils.jury_security_status",
+                council=t(council.name),
+                verdicts=len(council.jury_verdicts),
+                dispatches=len(council.security_dispatches),
+            )
+        )
+
         federal_council = self.orchestrator.mesh.get_council("CONS-FED-BRASIL")
         defence_lead = federal_council.portfolios[MinistryPortfolio.DEFENCE][0]
         self.lbl_defence_status.setText(
@@ -1202,7 +1391,7 @@ class CiberSocMainWindow(QMainWindow):
                 "councils.defence_status",
                 citizen_id=defence_lead.citizen_id,
                 full_name=defence_lead.full_name,
-                is_military=defence_lead.is_military_personnel,
+                is_military=t("status.yes" if defence_lead.is_military_personnel else "status.no"),
             )
         )
 
@@ -1220,11 +1409,24 @@ class CiberSocMainWindow(QMainWindow):
                 overlap=summary.overlapping_consecutive_members,
             )
         )
+        civic = self.orchestrator.civic_enablement_summary()
+        self.lbl_civic_summary.setText(
+            t(
+                "sortition.civic_summary",
+                total=civic["total"],
+                qualified=civic["technical_audit_qualified"],
+                compliant=civic["compliant"],
+                exempt=civic["age_exempt"],
+                pending=civic["pending_enablement"],
+            )
+        )
         councils = self.orchestrator.mesh.list_councils()
         self.tbl_proofs.setRowCount(len(councils))
         for row_index, council in enumerate(councils):
             proof, is_valid = self.orchestrator.proofs_by_council[council.council_id]
-            quotas_text = ", ".join(f"{stratum}:{quota}" for stratum, quota in proof.stratum_quotas)
+            quotas_text = ", ".join(
+                f"{t(f'stratum.{stratum}')}: {quota}" for stratum, quota in proof.stratum_quotas
+            )
             status_text = t("proof.valid") if is_valid else t("proof.invalid")
             self.tbl_proofs.setItem(row_index, 0, QTableWidgetItem(council.council_id))
             self.tbl_proofs.setItem(row_index, 1, QTableWidgetItem(str(proof.cycle_number)))
@@ -1248,30 +1450,59 @@ class CiberSocMainWindow(QMainWindow):
         clearing = self.orchestrator.evaluate_market_clearing(
             sector_id="HEALTH",
             labor_value_hours=1.0,
-            market_clearing_price_tokens=1.05,
+            market_clearing_price_tokens=self.orchestrator.market_clearing_ratio,
         )
-        eco = self.orchestrator.audit_carbon_budget(
-            annual_carbon_budget_megatons=500.0,
-            sector_outputs=directive.compulsory_gross_output,
-            carbon_intensity_per_output=(0.04, 0.03, 0.02, 0.01),
-        )
+        ray = self.orchestrator.last_kantorovich_ray
+        eco = self.orchestrator.last_ecological_audit
+        assert ray is not None and eco is not None
         base_summary = t(
             "cyber.metrics_summary",
-            winner=directive.winning_option_id,
+            winner=t(f"plebiscite.option.{directive.winning_option_id}"),
             ballots=directive.total_valid_ballots,
             rho=spectral_radius,
             shift=continuous_shift,
             hash_prefix=directive.directive_hash[:20],
         )
+        safe_label = t("status.yes" if eco.is_within_planetary_boundary else "status.no")
         self.lbl_cyber_metrics.setText(
             f"{base_summary}\n"
             f"[{t('cybernetics.market_clearing_title')}] r = p/v = {clearing.clearing_to_value_ratio:.2f} | Signal = {clearing.reallocation_signal:+.2f}\n"
-            f"[{t('cybernetics.carbon_budget_title')}] {eco.current_physical_carbon_draw:.1f} / {eco.annual_carbon_budget_megatons:.1f} Mt (Safe: {eco.is_within_planetary_boundary})"
+            f"[{t('cybernetics.carbon_budget_title')}] {eco.current_physical_carbon_draw:.1f} / {eco.annual_carbon_budget_megatons:.1f} Mt ({safe_label})"
+        )
+        if clearing.is_strumilin_equilibrium:
+            signal_key = "cyber.signal.equilibrium"
+        elif clearing.is_excess_demand:
+            signal_key = "cyber.signal.excess"
+        else:
+            signal_key = "cyber.signal.surplus"
+        bottleneck_label = t(self.orchestrator.sector_keys[ray.binding_resource_index])
+        boundary_status = t(
+            "cyber.boundary.safe"
+            if eco.is_within_planetary_boundary
+            else "cyber.boundary.breached"
+        )
+        self.lbl_cyber_feedback.setText(
+            t(
+                "cyber.feedback_summary",
+                ratio=f"{self.orchestrator.market_clearing_ratio:.2f}",
+                signal_status=t(signal_key),
+                ray_lambda=f"{ray.max_expansion_lambda:.3f}",
+                bottleneck=bottleneck_label,
+                carbon_draw=f"{eco.current_physical_carbon_draw:.1f}",
+                carbon_cap=f"{eco.annual_carbon_budget_megatons:.1f}",
+                boundary_status=boundary_status,
+                margin=f"{eco.remaining_ecological_space:+.1f}",
+            )
         )
         embedded_labour = compute_embedded_labour_hours_jacobi(
             self.orchestrator.technical_matrix, self.orchestrator.direct_labour_vector
         )
         shares_by_sector = dict(directive.compulsory_budget_shares_pct)
+        active_demand = (
+            self.orchestrator.current_iterated_demand
+            if self.orchestrator.current_iterated_demand is not None
+            else directive.compulsory_final_demand
+        )
         self.tbl_cyber.setRowCount(len(self.orchestrator.sector_keys))
         for index, sector_key in enumerate(self.orchestrator.sector_keys):
             self.tbl_cyber.setItem(index, 0, QTableWidgetItem(t(sector_key)))
@@ -1279,7 +1510,7 @@ class CiberSocMainWindow(QMainWindow):
                 index, 1, QTableWidgetItem(f"{shares_by_sector[sector_key]:.2f}%")
             )
             self.tbl_cyber.setItem(
-                index, 2, QTableWidgetItem(f"{directive.compulsory_final_demand[index]:.2f}")
+                index, 2, QTableWidgetItem(f"{active_demand[index]:.2f}")
             )
             self.tbl_cyber.setItem(
                 index, 3, QTableWidgetItem(f"{directive.compulsory_gross_output[index]:.2f}")
@@ -1296,7 +1527,7 @@ class CiberSocMainWindow(QMainWindow):
         self.lbl_enterprise_summary.setText(
             t(
                 "enterprise.summary",
-                name=self.orchestrator.enterprise.name,
+                name=t(self.orchestrator.enterprise.name),
                 mask_code=self.orchestrator.enterprise.property_mask.state_code,
                 net_profit=receipt.distributable_net_profit,
                 workers=receipt.eligible_worker_count,
@@ -1346,7 +1577,7 @@ class CiberSocMainWindow(QMainWindow):
                 t(
                     "mandate.status_active",
                     worker_id=record.citizen_id,
-                    council_id=record.council_id,
+                    council_id=t(f"council.{record.council_id}"),
                     prior_income=record.prior_civilian_monthly_income,
                     cpi=self.orchestrator.price_index_series.current_index,
                     current_pay=current_stipend,
@@ -1382,8 +1613,18 @@ class CiberSocMainWindow(QMainWindow):
             lines.append(
                 t("charter.scan_missing_paths", count=len(integrity_report.missing_required_paths))
             )
-            lines.append(t("charter.scan_clean_code", clean=clean_code_report.is_compliant))
-            lines.append(t("charter.scan_self_contained", ok=integrity_report.is_self_contained))
+            lines.append(
+                t(
+                    "charter.scan_clean_code",
+                    clean=t("status.yes" if clean_code_report.is_compliant else "status.no"),
+                )
+            )
+            lines.append(
+                t(
+                    "charter.scan_self_contained",
+                    ok=t("status.yes" if integrity_report.is_self_contained else "status.no"),
+                )
+            )
             lines.append("")
 
         charter = build_localized_architectural_charter(self.translator)
@@ -1405,12 +1646,12 @@ class CiberSocMainWindow(QMainWindow):
         self.txt_audit_log.setPlainText("\n".join(rendered_entries))
 
     def _is_headless_execution(self) -> bool:
-        return QApplication.platformName() == "offscreen"
+        return self._headless_detector()
 
     def _open_file_in_desktop(self, target_path: Path) -> bool:
         if self._is_headless_execution():
             return False
-        return QDesktopServices.openUrl(QUrl.fromLocalFile(str(target_path.resolve())))
+        return self._url_opener(QUrl.fromLocalFile(str(target_path.resolve())))
 
     def _sync_fullhd_wallpaper_locale(self, active_locale: SupportedLocale) -> Path:
         return export_fullhd_wallpaper(
@@ -1425,7 +1666,7 @@ class CiberSocMainWindow(QMainWindow):
             default_target = (
                 Path.home() / "Desktop" / f"cibersoc_freedom_wings_fullhd_{loc_suffix}.png"
             )
-            chosen_path, _ = QFileDialog.getSaveFileName(
+            chosen_path, _ = self._save_file_dialog(
                 self,
                 self.translator.translate("charter.btn_export_fullhd"),
                 str(default_target),
